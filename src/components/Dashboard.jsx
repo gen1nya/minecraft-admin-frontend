@@ -4,6 +4,7 @@ import CommandExecutor from "./CommandExecutor";
 import LogsViewer from "./LogsViewer.jsx";
 import AddToWhitelist from "./AddToWhitelist.jsx";
 import ServerInfo from "./ServerInfo.jsx";
+import { tokenPropType } from "../propTypes";
 
 const Wrapper = styled.div`
     display: grid;
@@ -65,6 +66,10 @@ const Dashboard = ({ token }) => {
 
         </Wrapper>
     );
+};
+
+Dashboard.propTypes = {
+    token: tokenPropType,
 };
 
 export default Dashboard;

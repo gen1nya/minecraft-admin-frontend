@@ -1,18 +1,5 @@
 import styled from "styled-components";
-import { executeCommand } from "../api/api";
-
-const Card = styled.div`
-    background: #333;
-    padding: 15px;
-    margin: 10px;
-    border-radius: 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    color: white;
-    width: 450px;
-    box-sizing: border-box; /* Учитывает padding и border в размерах */
-`;
+import { playerPropType, handlerPropType } from "../propTypes";
 
 const InfoContainer = styled.div`
     display: flex;
@@ -53,75 +40,45 @@ const PlayerText = styled.p`
     margin: 2px 0;
 `;
 
-const StatusContainer = styled.div`
+const PlayerNameContainer = styled.div`
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
+    align-items: center;
+    gap: 8px; /* Отступ между точкой и ником */
 `;
 
-const ButtonContainer = styled.div`
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
-  align-items: flex-end;
-  flex-direction: row-reverse;
-  width: 100%;
-  margin-bottom: 0px;
+const OnlineIndicator = styled.span`
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: ${(props) => (props.$isOnline ? "#2fd554" : "rgba(220,53,69,0)")};
+    display: inline-block;
 `;
 
-const Button = styled.button`
-  background: ${(props) => (props.$danger ? "#dc3545" : props.$op ? "#ffc107" : "#28a745")};
-  color: white;
-  padding: 8px 12px;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-
-  &:hover {
-    background: ${(props) => (props.$danger ? "#c82333" : props.$op ? "#e0a800" : "#218838")};
-  }
-`;
 
 const shortenUUID = (uuid) => {
-    return uuid ? `${uuid.slice(0, 4)}...${uuid.slice(-4)}` : "Unknown";
+    return uuid ? `${uuid.slice(0, 8)}...${uuid.slice(-8)}` : "Unknown";
 };
 
-const PlayerCard = ({ player, token, onRemove, onToggleOp }) => {
+const PlayerCard = ({ player, onClick }) => {
     const avatarUrl = `https://crafatar.com/avatars/${player.uuid}`;
 
-    const handleRemove = async () => {
-        await executeCommand(`whitelist remove ${player.name}`, token);
-        if (player.isOnline) {
-            await executeCommand(`kick ${player.name}`, token);
-        }
-        onRemove(player.name);
-    };
-
-    const handleToggleOp = async () => {
-        const command = player.isOp ? `deop ${player.name}` : `op ${player.name}`;
-        await executeCommand(command, token);
-        onToggleOp(player.name);
-    };
-
     return (
-        <Card>
-            <InfoContainer>
-                <Avatar src={avatarUrl} alt={player.name} />
-                <PlayerInfo>
-                    <PlayerName>{player.name}</PlayerName>
-                    <PlayerText>ID: {shortenUUID(player.uuid)}</PlayerText>
-                </PlayerInfo>
-                <StatusContainer>
-                    <PlayerText>Онлайн: {player.isOnline ? "✅" : "❌"}</PlayerText>
-                    <PlayerText>OP: {player.isOp ? "✅" : "❌"}</PlayerText>
-                </StatusContainer>
-            </InfoContainer>
-            <ButtonContainer>
-                <Button $danger onClick={handleRemove}>Удалить</Button>
-                <Button $op onClick={handleToggleOp}>{player.isOp ? "Deop" : "Op"}</Button>
-            </ButtonContainer>
-        </Card>
+        <InfoContainer onClick={() => onClick(player)}>
+            <Avatar src={avatarUrl} alt={player.name} />
+            <PlayerInfo>
+                <PlayerNameContainer>
+                    <PlayerName>{player.isOp ? "[OP]" : ""} {player.name}</PlayerName>
+                    <OnlineIndicator $isOnline={player.isOnline} />
+                </PlayerNameContainer>
+                <PlayerText>ID: {shortenUUID(player.uuid)}</PlayerText>
+            </PlayerInfo>
+        </InfoContainer>
     );
+};
+
+PlayerCard.propTypes = {
+    player: playerPropType,
+    onClick: handlerPropType,
 };
 
 export default PlayerCard;

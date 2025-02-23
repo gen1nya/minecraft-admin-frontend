@@ -45,8 +45,8 @@ const ProgressBar = styled.div`
     height: 10px;
     width: ${(props) => props.width}%;
     background-color: ${(props) =>
-            props.value >= 75 ? "#dc3545" :
-                    props.value >= 50 ? "#ffc107" :
+            props.value >= 90 ? "#dc3545" :
+                    props.value >= 75 ? "#ffc107" :
                             "#28a745"};
     transition: width 0.5s ease-in-out;
 `;
@@ -61,7 +61,7 @@ const ButtonContainer = styled.div`
 
 const Button = styled.button`
     padding: 8px 12px;
-    background: ${(props) => (props.danger ? "#dc3545" : "#ffc107")};
+    background: ${(props) => (props.$danger ? "#dc3545" : "#ffc107")};
     color: white;
     border: none;
     border-radius: 10px;
@@ -70,7 +70,7 @@ const Button = styled.button`
     margin-bottom: 5px;
 
     &:hover {
-        background: ${(props) => (props.danger ? "#c82333" : "#e0a800")};
+        background: ${(props) => (props.$danger ? "#c82333" : "#e0a800")};
     }
 `;
 
@@ -188,7 +188,7 @@ const ServerInfo = ({ token }) => {
 
                 <ButtonContainer>
                     <Button onClick={handleRestart}>Перезапуск</Button>
-                    <Button danger onClick={handleStop}>Остановить</Button>
+                    <Button $danger onClick={handleStop}>Остановить</Button>
                 </ButtonContainer>
             </Container>
         </>

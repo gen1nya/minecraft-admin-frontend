@@ -2,24 +2,26 @@ import { useState, useEffect } from "react";
 import styled from "styled-components";
 import { getPlayers } from "../api/api";
 import PlayerCard from "./PlayerCard";
+import PlayerDetailsModal from "./PlayerDetailsModal.jsx";
+import { tokenPropType } from "../propTypes";
 
 const PlayersListContainer = styled.div`
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 15px 15px 0;
+    padding: 15px;
     border-radius: 15px;
     background-color: #222;
     color: #fff;
     margin: 10px 10px 0;
-    height: 739px;
+    height: 740px;
     width: 470px;
     overflow: hidden;
 `;
 
 const Title = styled.h2`
     margin: 0;
-    padding-left: 20px;
+    padding: 0;
     width: 100%;
 `;
 
@@ -62,6 +64,7 @@ const ListContainer = styled.div`
 const PlayersList = ({ token }) => {
     const [players, setPlayers] = useState([]);
     const [searchQuery, setSearchQuery] = useState("");
+    const [selectedPlayer, setSelectedPlayer] = useState(null);
 
     const fetchData = async () => {
         try {
@@ -88,6 +91,12 @@ const PlayersList = ({ token }) => {
         ));
     };
 
+    const handleUpdatePlayer = (playerName, updatedFields) => {
+        setPlayers(players.map(player =>
+            player.name === playerName ? { ...player, ...updatedFields } : player
+        ));
+    };
+
     const filteredPlayers = players
         .filter(player => player.name.toLowerCase().includes(searchQuery.toLowerCase())) // Фильтрация по нику
         .sort((a, b) => b.isOnline - a.isOnline); // Сортировка: онлайн-игроки выше
@@ -107,17 +116,30 @@ const PlayersList = ({ token }) => {
                         <PlayerCard
                             key={player.uuid}
                             player={player}
-                            token={token}
-                            onRemove={handleRemove}
-                            onToggleOp={handleToggleOp}
+                            onClick={setSelectedPlayer}
                         />
                     ))
                 ) : (
                     <p>Игроки не найдены</p>
                 )}
             </ListContainer>
+
+            {selectedPlayer && (
+                <PlayerDetailsModal
+                    player={selectedPlayer}
+                    onClose={() => setSelectedPlayer(null)}
+                    onRemove={handleRemove}
+                    onToggleOp={handleToggleOp}
+                    onUpdatePlayer={handleUpdatePlayer}
+                    token={token}
+                />
+            )}
         </PlayersListContainer>
     );
+};
+
+PlayersList.propTypes = {
+    token: tokenPropType,
 };
 
 export default PlayersList;
