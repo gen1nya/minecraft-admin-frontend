@@ -9,12 +9,12 @@ import { tokenPropType } from "../propTypes";
 const Wrapper = styled.div`
     display: grid;
     grid-template-columns: repeat(2, 1fr);
+    padding: 100px 20px 20px;
     grid-template-rows: auto;
-    flex-wrap: wrap; 
-    justify-content: center; 
+    flex-wrap: wrap;
+    justify-content: center;
     align-items: flex-start;
     gap: 10px;
-    padding: 20px;
     min-height: 100vh;
     background-color: #454545;
     color: #fff;
@@ -61,7 +61,7 @@ const Dashboard = ({ token }) => {
                 <PlayersList token={token} />
             </PlayersContainer>
             <LogsContainer>
-                <LogsViewer />
+                <LogsViewer token={token} />
             </LogsContainer>
 
         </Wrapper>

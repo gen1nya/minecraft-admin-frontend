@@ -9,20 +9,18 @@ const Container = styled.div`
     padding: 15px;
     background-color: #222;
     border-radius: 15px;
-    margin: 10px;
     width: 470px;
 `;
 
 const Title = styled.h2`
-    padding-left: 20px;
-    margin: 0 0 9px;
     width: 100%;
+    margin: 0;
+    padding: 0;
 `;
 
 const Input = styled.input`
     width: 100%;
-    padding: 10px;
-    margin-bottom: 10px;
+    padding: 8px 12px;
     border: 1px solid #555;
     border-radius: 5px;
     background-color: #222;
@@ -30,10 +28,11 @@ const Input = styled.input`
 `;
 
 const Button = styled.button`
-    width: 100%;
-    padding: 10px;
+    width: auto;
     background: #28a745;
+    padding: 8px 12px;
     color: white;
+    margin-left: 10px;
     border: none;
     border-radius: 5px;
     cursor: pointer;
@@ -42,6 +41,14 @@ const Button = styled.button`
         background: #218838;
     }
 `;
+
+const InputButtonContainer = styled.div`
+    width: 100%;
+    margin-top: 10px;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+`
 
 const Popup = styled.div`
     position: fixed;
@@ -100,13 +107,16 @@ const AddToWhitelist = ({ token }) => {
             {popupMessage && <Popup visible={isPopupVisible} error={isError}>{popupMessage}</Popup>}
             <Container>
                 <Title>Добавить игрока в Whitelist</Title>
-                <Input
-                    type="text"
-                    placeholder="Введите ник..."
-                    value={playerName}
-                    onChange={(e) => setPlayerName(e.target.value)}
-                />
-                <Button onClick={handleAdd}>Добавить</Button>
+                <InputButtonContainer>
+                    <Input
+                        type="text"
+                        placeholder="Введите ник..."
+                        value={playerName}
+                        onChange={(e) => setPlayerName(e.target.value)}
+                    />
+                    <Button onClick={handleAdd}>Добавить</Button>
+                </InputButtonContainer>
+
             </Container>
         </>
     );

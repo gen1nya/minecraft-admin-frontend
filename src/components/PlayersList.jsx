@@ -13,7 +13,6 @@ const PlayersListContainer = styled.div`
     border-radius: 15px;
     background-color: #222;
     color: #fff;
-    margin: 10px 10px 0;
     height: 740px;
     width: 470px;
     overflow: hidden;

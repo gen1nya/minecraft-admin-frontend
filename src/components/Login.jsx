@@ -1,7 +1,8 @@
-import { useState } from "react";
+import {useState} from "react";
 import styled from "styled-components";
 import Cookies from "js-cookie";
-import { login } from "../api/api";
+import {login} from "../api/api";
+import {handlerPropType} from "../propTypes.js";
 
 const Container = styled.div`
     display: flex;
@@ -57,7 +58,7 @@ const ErrorMessage = styled.p`
     font-size: 0.9rem;
 `;
 
-const Login = ({ setToken }) => {
+const Login = ({onLogin}) => {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
@@ -66,9 +67,10 @@ const Login = ({ setToken }) => {
         e.preventDefault();
         try {
             const token = await login(username, password);
-            Cookies.set("token", token, { expires: 1 }); // Сохраняем токен в cookies
-            setToken(token);
+            Cookies.set("token", token, {expires: 1});
+            onLogin(token, "Admin");
         } catch (err) {
+            console.log(err)
             setError("Ошибка авторизации");
         }
     };
@@ -96,6 +98,11 @@ const Login = ({ setToken }) => {
             </LoginBox>
         </Container>
     );
+};
+
+
+Login.propTypes = {
+    onLogin: handlerPropType,
 };
 
 export default Login;

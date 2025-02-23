@@ -6,17 +6,16 @@ const Container = styled.div`
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 15px 25px;
+    padding: 15px;
     background-color: #222;
     border-radius: 15px;
-    margin: 10px;
-    width: 450px;
+    width: 470px;
 `;
 
 const Title = styled.h2`
-    padding-left: 20px;
-    margin: 2px 0 10px;
+    padding: 0;
     width: 100%;
+    margin: 0 0 10px;
     color: #fff;
 `;
 
@@ -56,6 +55,7 @@ const ButtonContainer = styled.div`
     align-items: flex-end;
     flex-direction: row-reverse;
     gap: 10px;
+    margin-top: 10px;
     width: 100%;
 `;
 
@@ -64,10 +64,8 @@ const Button = styled.button`
     background: ${(props) => (props.$danger ? "#dc3545" : "#ffc107")};
     color: white;
     border: none;
-    border-radius: 10px;
+    border-radius: 5px;
     cursor: pointer;
-    margin-top: 5px;
-    margin-bottom: 5px;
 
     &:hover {
         background: ${(props) => (props.$danger ? "#c82333" : "#e0a800")};

@@ -1,48 +1,60 @@
-import { useState, useEffect } from "react";
-import {WS_URL} from "../api/api";
+import { useState, useEffect, useRef } from "react";
+import { WS_URL } from "../api/api";
 import styled from "styled-components";
+import {tokenPropType} from "../propTypes.js";
 
 const LogContainer = styled.div`
     background: #222;
     color: #fff;
     padding: 10px;
     border-radius: 15px;
-    width: 1010px;
+    width: 990px;
     height: 500px;
-    margin: 10px;
     overflow-y: auto;
     font-family: monospace;
 `;
 
-const LogsViewer = () => {
+const LogsViewer = ({ token }) => {
     const [logs, setLogs] = useState([]);
+    const ws = useRef(null);
+    const reconnectTimeout = useRef(null);
 
     useEffect(() => {
-        const ws = new WebSocket(WS_URL);
+        if (!token) return;
 
-        ws.onopen = () => {
-            console.log("WebSocket connection established");
+        const connectWebSocket = () => {
+            console.log("🔌 WebSocket connecting...");
+            ws.current = new WebSocket(`${WS_URL}?token=${token}`);
+
+            ws.current.onopen = () => {
+                console.log("✅ WebSocket connected!");
+            };
+
+            ws.current.onmessage = (event) => {
+                setLogs((prevLogs) => [...prevLogs.slice(-99), event.data]);
+            };
+
+            ws.current.onerror = (error) => {
+                console.error("❌ WebSocket error:", error);
+                ws.current.close();
+            };
+
+            ws.current.onclose = (event) => {
+                console.warn("⚠️ WebSocket closed, code:", event.code);
+                if (event.code !== 1000) {
+                    reconnectTimeout.current = setTimeout(connectWebSocket, 3000);
+                }
+            };
         };
 
-        ws.onmessage = (event) => {
-            setLogs((prevLogs) => [...prevLogs.slice(-50), event.data]);
-        };
-
-        ws.onerror = (error) => {
-            console.error("WebSocket error:", error);
-        };
+        connectWebSocket();
 
         return () => {
-            // Если соединение ещё в процессе подключения, ждём его открытия и сразу закрываем
-            if (ws.readyState === WebSocket.CONNECTING) {
-                ws.onopen = () => {
-                    ws.close();
-                };
-            } else if (ws.readyState === WebSocket.OPEN) {
-                ws.close();
-            }
+            console.log("⏏️ WebSocket closing...");
+            if (ws.current) ws.current.close();
+            clearTimeout(reconnectTimeout.current);
         };
-    }, []);
+    }, [token]);
 
     return (
         <LogContainer>
@@ -51,6 +63,10 @@ const LogsViewer = () => {
             ))}
         </LogContainer>
     );
+};
+
+LogsViewer.propTypes = {
+    token: tokenPropType,
 };
 
 export default LogsViewer;

@@ -1,8 +1,8 @@
 import styled from "styled-components";
 import {executeCommand} from "../api/api.js";
-import { useState } from "react";
+import {useState} from "react";
 import {useLongPress} from "../hooks/useLongPress";
-import { playerPropType, tokenPropType, handlerPropType } from "../propTypes";
+import {playerPropType, tokenPropType, handlerPropType} from "../propTypes";
 
 const ErrorPopup = styled.div`
     position: fixed;
@@ -46,11 +46,11 @@ const Avatar = styled.img`
 `;
 
 const PlayerInfo = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  flex-grow: 1;
-  margin-left: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    flex-grow: 1;
+    margin-left: 10px;
 `;
 
 const PlayerNameContainer = styled.div`
@@ -70,7 +70,7 @@ const OnlineIndicator = styled.span`
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background-color: ${(props) => (props.isOnline ? "#2fd554" : "rgba(220,53,69,0)")};
+    background-color: ${(props) => (props.$isOnline ? "#2fd554" : "rgba(220,53,69,0)")};
     display: inline-block;
 `;
 
@@ -81,26 +81,26 @@ const PlayerText = styled.p`
 `;
 
 const ButtonContainer = styled.div`
-  display: flex;
-  gap: 10px;
-  margin-top: 20px;
-  align-items: flex-end;
-  flex-direction: row;
-  width: 100%;
-  margin-bottom: 0px;
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    align-items: flex-end;
+    flex-direction: row;
+    width: 100%;
+    margin-bottom: 0;
 `;
 
 const Button = styled.button`
-  background: ${(props) => (props.$danger ? "#dc3545" : props.$warn ? "#ffc107" : "#28a745")};
-  color: white;
-  padding: 8px 12px;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
+    background: ${(props) => (props.$danger ? "#dc3545" : props.$warn ? "#ffc107" : "#28a745")};
+    color: white;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
 
-  &:hover {
-    background: ${(props) => (props.$danger ? "#c82333" : props.$warn ? "#e0a800" : "#218838")};
-  }
+    &:hover {
+        background: ${(props) => (props.$danger ? "#c82333" : props.$warn ? "#e0a800" : "#218838")};
+    }
 `;
 
 const HSepavator = styled.div`
@@ -118,9 +118,16 @@ const ModalContainer = styled.div`
     width: 400px;
     color: white;
     text-align: center;
+    border: 1px solid ${(props) =>
+            props.$isOp ? "#ffcc00" : props.$isCreative ? "#28a745" : "#666"};
+
+    box-shadow: 0 0 15px ${(props) =>
+            props.$isOp ? "rgba(255, 204, 0, 0.8)"
+                    : props.$isCreative ? "rgba(40, 167, 69, 0.8)"
+                            : "rgba(102, 102, 102, 0.5)"};
 `;
 
-const PlayerDetailsModal = ({ player, onClose, onRemove, onToggleOp, onUpdatePlayer, token }) => {
+const PlayerDetailsModal = ({player, onClose, onRemove, onToggleOp, onUpdatePlayer, token}) => {
 
     const handleRemove = async () => {
         await executeCommand(`whitelist remove ${player.name}`, token);
@@ -154,7 +161,7 @@ const PlayerDetailsModal = ({ player, onClose, onRemove, onToggleOp, onUpdatePla
                 return;
             }
             setGameMode(mode.toUpperCase());
-            onUpdatePlayer(player.name, { gameMode: mode.toUpperCase() });
+            onUpdatePlayer(player.name, {gameMode: mode.toUpperCase()});
         } catch (error) {
             console.log(error);
             setError("Ошибка выполнения команды");
@@ -164,24 +171,33 @@ const PlayerDetailsModal = ({ player, onClose, onRemove, onToggleOp, onUpdatePla
 
     const getGameModeText = (mode) => {
         switch (mode) {
-            case "SURVIVAL": return "🏹 Survival";
-            case "CREATIVE": return "🎨 Creative";
-            case "ADVENTURE": return "🗺️ Adventure";
-            case "SPECTATOR": return "👁️ Spectator";
-            default: return "❓ Unknown";
+            case "SURVIVAL":
+                return "🏹 Survival";
+            case "CREATIVE":
+                return "🎨 Creative";
+            case "ADVENTURE":
+                return "🗺️ Adventure";
+            case "SPECTATOR":
+                return "👁️ Spectator";
+            default:
+                return "❓ Unknown";
         }
     };
 
     return (
         <>
             <Overlay onClick={onClose}>
-                <ModalContainer onClick={(e) => e.stopPropagation()}>
+                <ModalContainer
+                    onClick={(e) => e.stopPropagation()}
+                    $isOp={player.isOp}
+                    $isCreative={player.gameMode === "CREATIVE"}
+                >
                     <InfoContainer>
-                        <Avatar src={avatarUrl} alt={player.name} />
+                        <Avatar src={avatarUrl} alt={player.name}/>
                         <PlayerInfo>
                             <PlayerNameContainer>
                                 <PlayerName>{player.isOp ? "[OP]" : ""} {player.name}</PlayerName>
-                                <OnlineIndicator isOnline={player.isOnline} />
+                                <OnlineIndicator $isOnline={player.isOnline}/>
                             </PlayerNameContainer>
                             <PlayerText>ID: {player.uuid}</PlayerText>
                             <PlayerText>GM: {getGameModeText(gameMode)}</PlayerText>
