@@ -13,7 +13,7 @@ const PlayersListContainer = styled.div`
     border-radius: 15px;
     background-color: #222;
     color: #fff;
-    height: 740px;
+    height: 627px;
     width: 470px;
     overflow: hidden;
 `;
@@ -75,8 +75,8 @@ const PlayersList = ({ token }) => {
     };
 
     useEffect(() => {
-        fetchData(); // Первоначальная загрузка
-        const interval = setInterval(fetchData, 5000); // Обновление раз в 5 секунд
+        fetchData();
+        const interval = setInterval(fetchData, 5000);
         return () => clearInterval(interval);
     }, [token]);
 
@@ -97,8 +97,11 @@ const PlayersList = ({ token }) => {
     };
 
     const filteredPlayers = players
-        .filter(player => player.name.toLowerCase().includes(searchQuery.toLowerCase())) // Фильтрация по нику
-        .sort((a, b) => b.isOnline - a.isOnline); // Сортировка: онлайн-игроки выше
+        .filter(player =>
+            player.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            player.uuid.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+        .sort((a, b) => b.isOnline - a.isOnline);
 
     return (
         <PlayersListContainer>
