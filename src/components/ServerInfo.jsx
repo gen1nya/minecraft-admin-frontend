@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import {useState, useEffect, useRef} from "react";
 import styled from "styled-components";
-import { executeCommand } from "../api/api";
+import {executeCommand} from "../api/api";
+import {tokenPropType} from "../propTypes.js";
 
 const Container = styled.div`
     display: flex;
@@ -23,10 +24,8 @@ const InfoBlock = styled.div`
     background: #333;
     padding: 10px;
     border-radius: 8px;
-    margin-left: 20px;
-    margin-right: 20px;
+    margin: 0 20px 10px;
     width: 100%;
-    margin-bottom: 10px;
     color: #fff;
     text-align: start;
     box-sizing: border-box;
@@ -55,8 +54,6 @@ const ButtonContainer = styled.div`
     align-items: flex-end;
     flex-direction: row-reverse;
     gap: 10px;
-    margin-top: 10px;
-    width: 100%;
 `;
 
 const Button = styled.button`
@@ -69,6 +66,45 @@ const Button = styled.button`
 
     &:hover {
         background: ${(props) => (props.$danger ? "#c82333" : "#e0a800")};
+    }
+`;
+
+const ButtonsParentContainer = styled.div`
+    display: flex;
+    width: 100%;
+    align-items: flex-end;
+    flex-direction: row-reverse;
+`
+
+const ButtonsWrapper = styled.div`
+    position: relative;
+    display: inline-block;
+    padding: 5px;
+`;
+
+const Slider = styled.div`
+    position: absolute;
+    top: 0;
+    left: ${(props) => props.offset}px;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(5px);
+    border-radius: 5px;
+    cursor: grab;
+    transition: ${(props) => (props.isDragging ? "none" : "left 0.3s ease")};
+    z-index: 2;
+
+    &::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        right: -5px;
+        transform: translateY(-50%);
+        width: 10px;
+        height: 20px;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 3px;
     }
 `;
 
@@ -87,7 +123,7 @@ const Popup = styled.div`
     transition: opacity 0.5s ease-in-out;
 `;
 
-const ServerInfo = ({ token }) => {
+const ServerInfo = ({token}) => {
     const [serverData, setServerData] = useState({
         version: "Загрузка...",
         tps: null,
@@ -99,11 +135,42 @@ const ServerInfo = ({ token }) => {
     const [isPopupVisible, setIsPopupVisible] = useState(false);
     const [isError, setIsError] = useState(false);
 
+    const [sliderOffset, setSliderOffset] = useState(0);
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragStartX, setDragStartX] = useState(0);
+    const [dragStartOffset, setDragStartOffset] = useState(0);
+    const [maxDrag, setMaxDrag] = useState(0);
+
+    const buttonsWrapperRef = useRef(null);
+    const containerRef = useRef(null);
+
     useEffect(() => {
         fetchServerInfo();
         const interval = setInterval(fetchServerInfo, 10000);
         return () => clearInterval(interval);
     }, []);
+
+
+    useEffect(() => {
+        if (buttonsWrapperRef.current) {
+            setMaxDrag(buttonsWrapperRef.current.clientWidth);
+        }
+    }, [buttonsWrapperRef.current]);
+
+    useEffect(() => {
+        const handleDocumentClick = (e) => {
+            if (containerRef.current && !containerRef.current.contains(e.target)) {
+                if (sliderOffset !== 0) {
+                    setSliderOffset(0);
+                }
+            }
+        };
+
+        document.addEventListener("click", handleDocumentClick);
+        return () => {
+            document.removeEventListener("click", handleDocumentClick);
+        };
+    }, [sliderOffset]);
 
     const fetchServerInfo = async () => {
         try {
@@ -121,6 +188,7 @@ const ServerInfo = ({ token }) => {
                 memoryAllocatedMB: data.memoryAllocatedMB,
             });
         } catch (err) {
+            console.error(err);
             showPopup("Ошибка загрузки данных сервера", true);
         }
     };
@@ -161,17 +229,65 @@ const ServerInfo = ({ token }) => {
         ? (serverData.memoryUsedMB / serverData.memoryAllocatedMB) * 100
         : 0;
 
+    const handleSliderMouseDown = (e) => {
+        setIsDragging(true);
+        setDragStartX(e.clientX);
+        setDragStartOffset(sliderOffset);
+    };
+
+    useEffect(() => {
+        const handleMouseMove = (e) => {
+            if (!isDragging) return;
+            const delta = e.clientX - dragStartX;
+            let newOffset = dragStartOffset + delta;
+            if (newOffset > 0) newOffset = 0; // не двигаем вправо
+            if (newOffset < -maxDrag) newOffset = -maxDrag;
+            setSliderOffset(newOffset);
+        };
+
+        const handleMouseUp = () => {
+            if (isDragging) {
+                if (sliderOffset > -maxDrag + 10) {
+                    setSliderOffset(0);
+                }
+                setIsDragging(false);
+            }
+        };
+
+        document.addEventListener("mousemove", handleMouseMove);
+        document.addEventListener("mouseup", handleMouseUp);
+
+        return () => {
+            document.removeEventListener("mousemove", handleMouseMove);
+            document.removeEventListener("mouseup", handleMouseUp);
+        };
+    }, [isDragging, dragStartX, dragStartOffset, sliderOffset, maxDrag]);
+
+    const handleRestartWrapper = () => {
+        if (sliderOffset === -maxDrag) {
+            setSliderOffset(0);
+        }
+        handleRestart();
+    };
+
+    const handleStopWrapper = () => {
+        if (sliderOffset === -maxDrag) {
+            setSliderOffset(0);
+        }
+        handleStop();
+    };
+
     return (
         <>
             {popupMessage && <Popup visible={isPopupVisible} error={isError}>{popupMessage}</Popup>}
-            <Container>
+            <Container ref={containerRef}>
                 <Title>Статус сервера</Title>
                 <InfoBlock>Версия: {serverData.version}</InfoBlock>
 
                 <InfoBlock>
                     TPS: {serverData.tps !== null ? `${serverData.tps} TPS` : "Загрузка..."}
                     <ProgressBarContainer>
-                        <ProgressBar width={(serverData.tps / 20) * 100} value={serverData.tps} />
+                        <ProgressBar width={(serverData.tps / 20) * 100} value={serverData.tps}/>
                     </ProgressBarContainer>
                 </InfoBlock>
 
@@ -180,17 +296,32 @@ const ServerInfo = ({ token }) => {
                 <InfoBlock>
                     Использование памяти: {serverData.memoryUsedMB} MB / {serverData.memoryAllocatedMB} MB
                     <ProgressBarContainer>
-                        <ProgressBar width={memoryUsagePercent} value={memoryUsagePercent} />
+                        <ProgressBar width={memoryUsagePercent} value={memoryUsagePercent}/>
                     </ProgressBarContainer>
                 </InfoBlock>
-
-                <ButtonContainer>
-                    <Button onClick={handleRestart}>Перезапуск</Button>
-                    <Button $danger onClick={handleStop}>Остановить</Button>
-                </ButtonContainer>
+                <ButtonsParentContainer>
+                    <ButtonsWrapper ref={buttonsWrapperRef}>
+                        <ButtonContainer>
+                            <Button onClick={handleRestartWrapper}>Restart</Button>
+                            <Button $danger onClick={handleStopWrapper}>STOP</Button>
+                        </ButtonContainer>
+                        <Slider
+                            offset={sliderOffset}
+                            maxDrag={maxDrag}
+                            isDragging={isDragging}
+                            onMouseDown={handleSliderMouseDown}
+                        />
+                    </ButtonsWrapper>
+                </ButtonsParentContainer>
             </Container>
         </>
     );
 };
+
+
+ServerInfo.propTypes = {
+    token: tokenPropType,
+};
+
 
 export default ServerInfo;
