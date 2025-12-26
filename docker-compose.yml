@@ -1,0 +1,39 @@
+services:
+  mc-admin-client:
+    build:
+      context: .
+      dockerfile: packages/client/Dockerfile
+    container_name: mc-admin-client
+    restart: unless-stopped
+    depends_on:
+      - mc-admin-server
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.mc-admin.rule=Host(`mc-admin.boris.local`)"
+      - "traefik.http.routers.mc-admin.entrypoints=websecure"
+      - "traefik.http.routers.mc-admin.tls=true"
+      - "traefik.http.services.mc-admin.loadbalancer.server.port=80"
+    networks:
+      - traefik
+      - mc-admin
+
+  mc-admin-server:
+    build:
+      context: .
+      dockerfile: packages/server/Dockerfile
+    container_name: mc-admin-server
+    restart: unless-stopped
+    environment:
+      - RCON_HOST=${RCON_HOST:-mcserver_purpur}
+      - RCON_PORT=${RCON_PORT:-25575}
+      - RCON_PASSWORD=${RCON_PASSWORD}
+      - PORT=3001
+    networks:
+      - mc-admin
+
+networks:
+  traefik:
+    external: true
+  mc-admin:
+    driver: bridge

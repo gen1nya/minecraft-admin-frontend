@@ -3,7 +3,9 @@ import cors from 'cors';
 import { config } from 'dotenv';
 import { Rcon } from 'rcon-client';
 
+// Load .env for local development (in Docker, env vars come from compose)
 config({ path: '../../.env' });
+config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
