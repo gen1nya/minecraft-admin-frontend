@@ -6,16 +6,6 @@
 
 ---
 
-## Credentials
-
-```
-Server:   boris.local (192.168.129.18)
-Port:     25575
-Password: nahgheeZ2pheiv6Iu9aigheecha0eiChoh2ki9ceeholienoh8Ahbeideeb0oore
-```
-
----
-
 ## Подключение
 
 API доступно через RCON протокол.
@@ -52,6 +42,7 @@ playerlist
 ```
 
 **Поля:**
+
 | Поле | Тип | Описание |
 |------|-----|----------|
 | name | string | Имя игрока |
@@ -82,6 +73,7 @@ serverstat
 ```
 
 **Поля:**
+
 | Поле | Тип | Описание |
 |------|-----|----------|
 | version | string | Версия сервера (Purpur + MC) |
