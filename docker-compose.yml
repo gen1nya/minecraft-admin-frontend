@@ -30,6 +30,7 @@ services:
       - RCON_PASSWORD=${RCON_PASSWORD}
       - PORT=3001
     networks:
+      - traefik
       - mc-admin
 
 networks:
