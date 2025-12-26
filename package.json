@@ -1,0 +1,19 @@
+{
+  "name": "minecraft-admin-panel",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "npm run dev --workspace=@mcp/server",
+    "dev:client": "npm run dev --workspace=@mcp/client",
+    "build": "npm run build --workspaces",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.5.3"
+  }
+}
