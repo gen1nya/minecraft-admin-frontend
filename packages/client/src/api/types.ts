@@ -3,6 +3,9 @@ export interface ServerStats {
   onlinePlayers: number;
   memoryUsedMB: number;
   memoryAllocatedMB: number;
+  tps1m: number;
+  tps5m: number;
+  tps15m: number;
 }
 
 export interface Player {
