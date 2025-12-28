@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import styled from 'styled-components';
-import { theme, Card, CardHeader, CardTitle, Skeleton, Flex, StatusBadge, Button, Input } from '@/styles';
+import { theme, Card, CardHeader, CardTitle, Skeleton, Flex, StatusBadge, Button } from '@/styles';
 import { usePlayers } from '@/hooks';
-import { api } from '@/api';
 import type { Player } from '@/api';
 import { PlayerModal } from './PlayerModal';
+import { AddPlayerModal } from './AddPlayerModal';
 
 const PlayerGrid = styled.div`
   display: flex;
@@ -101,14 +101,8 @@ const OnlineCount = styled.span`
   font-weight: ${theme.typography.fontWeight.regular};
 `;
 
-const AddPlayerForm = styled.form`
-  display: flex;
-  gap: ${theme.spacing.sm};
+const AddButton = styled(Button)`
   margin-bottom: ${theme.spacing.md};
-`;
-
-const AddInput = styled(Input)`
-  flex: 1;
 `;
 
 function getAvatarUrl(uuid: string): string {
@@ -145,11 +139,9 @@ function Avatar({ uuid, name }: { uuid: string; name: string }) {
 
 export function PlayerList() {
   const { players, loading, error, refetch } = usePlayers();
-  const [newPlayer, setNewPlayer] = useState('');
-  const [addLoading, setAddLoading] = useState(false);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  const [addModalOpen, setAddModalOpen] = useState(false);
 
-  // Всегда берём актуальные данные игрока из списка
   const selectedPlayer = selectedPlayerId
     ? players.find(p => p.uuid === selectedPlayerId) ?? null
     : null;
@@ -161,22 +153,6 @@ export function PlayerList() {
     return a.name.localeCompare(b.name);
   });
 
-  const handleAddPlayer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newPlayer.trim()) return;
-
-    setAddLoading(true);
-    try {
-      await api.whitelistAdd(newPlayer.trim());
-      setNewPlayer('');
-      refetch();
-    } catch (err) {
-      console.error('Failed to add player:', err);
-    } finally {
-      setAddLoading(false);
-    }
-  };
-
   return (
     <>
       <Card>
@@ -186,18 +162,9 @@ export function PlayerList() {
           </CardTitle>
         </CardHeader>
 
-        <AddPlayerForm onSubmit={handleAddPlayer}>
-          <AddInput
-            type="text"
-            placeholder="Add player to whitelist..."
-            value={newPlayer}
-            onChange={e => setNewPlayer(e.target.value)}
-            disabled={addLoading}
-          />
-          <Button type="submit" disabled={addLoading || !newPlayer.trim()}>
-            {addLoading ? '...' : 'Add'}
-          </Button>
-        </AddPlayerForm>
+        <AddButton onClick={() => setAddModalOpen(true)}>
+          + Add Player
+        </AddButton>
 
         {error && <ErrorText>{error}</ErrorText>}
 
@@ -236,6 +203,13 @@ export function PlayerList() {
         player={selectedPlayer}
         onClose={() => setSelectedPlayerId(null)}
         onUpdate={refetch}
+      />
+
+      <AddPlayerModal
+        open={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        onSuccess={refetch}
+        existingPlayerIds={players.map(p => p.uuid)}
       />
     </>
   );

@@ -12,3 +12,8 @@ export interface Player {
   isOnline: boolean;
   gameMode: 'SURVIVAL' | 'CREATIVE' | 'ADVENTURE' | 'SPECTATOR' | 'unknown';
 }
+
+export interface MojangProfile {
+  id: string;
+  name: string;
+}

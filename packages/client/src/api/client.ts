@@ -1,4 +1,4 @@
-import type { ServerStats, Player } from './types';
+import type { ServerStats, Player, MojangProfile } from './types';
 
 const API_BASE = '/api';
 
@@ -57,5 +57,11 @@ export const api = {
     fetchJson<{ response: string }>('/rcon', {
       method: 'POST',
       body: JSON.stringify({ command: `deop ${player}` }),
+    }),
+
+  lookupPlayer: (query: string) =>
+    fetchJson<MojangProfile>('/mojang/profile', {
+      method: 'POST',
+      body: JSON.stringify({ query }),
     }),
 };
