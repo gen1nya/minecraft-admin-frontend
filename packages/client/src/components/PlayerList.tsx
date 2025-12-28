@@ -6,6 +6,23 @@ import type { Player } from '@/api';
 import { PlayerModal } from './PlayerModal';
 import { AddPlayerModal } from './AddPlayerModal';
 
+const PlayerGridWrapper = styled.div`
+  position: relative;
+  max-height: 400px;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    background: linear-gradient(to bottom, transparent, ${theme.colors.background.secondary});
+    pointer-events: none;
+    border-radius: 0 0 ${theme.borderRadius.md} ${theme.borderRadius.md};
+  }
+`;
+
 const PlayerGrid = styled.div`
   display: flex;
   flex-direction: column;
@@ -14,6 +31,7 @@ const PlayerGrid = styled.div`
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: ${theme.spacing.xs};
+  padding-bottom: 24px;
 
   /* Scrollbar styling */
   &::-webkit-scrollbar {
@@ -292,26 +310,28 @@ export function PlayerList() {
             {players.length === 0 ? 'No players in whitelist' : 'No players match your search'}
           </EmptyState>
         ) : (
-          <PlayerGrid>
-            {filteredPlayers.map(player => (
-              <PlayerRow key={player.uuid} onClick={() => setSelectedPlayerId(player.uuid)}>
-                <Avatar uuid={player.uuid} name={player.name} />
-                <PlayerInfo>
-                  <PlayerName>
-                    {player.name}
-                    {player.isOp && <OpBadge>OP</OpBadge>}
-                    {player.isBanned && <BannedBadge>Banned</BannedBadge>}
-                  </PlayerName>
-                  <PlayerMeta>
-                    {formatGameMode(player.gameMode) || 'Click to manage'}
-                  </PlayerMeta>
-                </PlayerInfo>
-                <StatusBadge status={player.isOnline ? 'online' : 'offline'}>
-                  {player.isOnline ? 'Online' : 'Offline'}
-                </StatusBadge>
-              </PlayerRow>
-            ))}
-          </PlayerGrid>
+          <PlayerGridWrapper>
+            <PlayerGrid>
+              {filteredPlayers.map(player => (
+                <PlayerRow key={player.uuid} onClick={() => setSelectedPlayerId(player.uuid)}>
+                  <Avatar uuid={player.uuid} name={player.name} />
+                  <PlayerInfo>
+                    <PlayerName>
+                      {player.name}
+                      {player.isOp && <OpBadge>OP</OpBadge>}
+                      {player.isBanned && <BannedBadge>Banned</BannedBadge>}
+                    </PlayerName>
+                    <PlayerMeta>
+                      {formatGameMode(player.gameMode) || 'Click to manage'}
+                    </PlayerMeta>
+                  </PlayerInfo>
+                  <StatusBadge status={player.isOnline ? 'online' : 'offline'}>
+                    {player.isOnline ? 'Online' : 'Offline'}
+                  </StatusBadge>
+                </PlayerRow>
+              ))}
+            </PlayerGrid>
+          </PlayerGridWrapper>
         )}
       </Card>
 
