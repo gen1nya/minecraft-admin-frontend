@@ -12,6 +12,26 @@ const PlayerGrid = styled.div`
   gap: ${theme.spacing.sm};
   max-height: 400px;
   overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: ${theme.spacing.xs};
+
+  /* Scrollbar styling */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: ${theme.colors.border.default};
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: ${theme.colors.border.light};
+  }
 `;
 
 const PlayerRow = styled.div`
