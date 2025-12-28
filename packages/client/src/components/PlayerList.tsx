@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import styled from 'styled-components';
 import { theme, Card, CardHeader, CardTitle, Skeleton, Flex, StatusBadge, Button, Input } from '@/styles';
 import { usePlayers } from '@/hooks';
@@ -6,9 +6,23 @@ import type { Player } from '@/api';
 import { PlayerModal } from './PlayerModal';
 import { AddPlayerModal } from './AddPlayerModal';
 
-const PlayerGridWrapper = styled.div`
+const PlayerGridWrapper = styled.div<{ $showTopFade: boolean }>`
   position: relative;
   max-height: 400px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 6px;
+    height: 40px;
+    background: linear-gradient(to top, transparent, ${theme.colors.background.secondary});
+    pointer-events: none;
+    z-index: 1;
+    opacity: ${props => props.$showTopFade ? 1 : 0};
+    transition: opacity ${theme.transitions.fast};
+  }
 
   &::after {
     content: '';
@@ -228,6 +242,11 @@ export function PlayerList() {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<FilterType>('all');
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    setIsScrolled(e.currentTarget.scrollTop > 10);
+  }, []);
 
   const selectedPlayer = selectedPlayerId
     ? players.find(p => p.uuid === selectedPlayerId) ?? null
@@ -310,8 +329,8 @@ export function PlayerList() {
             {players.length === 0 ? 'No players in whitelist' : 'No players match your search'}
           </EmptyState>
         ) : (
-          <PlayerGridWrapper>
-            <PlayerGrid>
+          <PlayerGridWrapper $showTopFade={isScrolled}>
+            <PlayerGrid onScroll={handleScroll}>
               {filteredPlayers.map(player => (
                 <PlayerRow key={player.uuid} onClick={() => setSelectedPlayerId(player.uuid)}>
                   <Avatar uuid={player.uuid} name={player.name} />
