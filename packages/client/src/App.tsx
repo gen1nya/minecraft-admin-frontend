@@ -1,6 +1,6 @@
 import styled from 'styled-components';
 import { Container, PageWrapper, theme } from '@/styles';
-import { ServerStats, PlayerList } from '@/components';
+import { ServerStats, PlayerList, Console } from '@/components';
 
 const Header = styled.header`
   background: ${theme.colors.background.secondary};
@@ -28,6 +28,7 @@ const DashboardGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: ${theme.spacing.lg};
+  margin-bottom: ${theme.spacing.lg};
 
   @media (max-width: ${theme.breakpoints.desktop}) {
     grid-template-columns: 1fr;
@@ -53,6 +54,7 @@ export function App() {
             <ServerStats />
             <PlayerList />
           </DashboardGrid>
+          <Console />
         </Container>
       </PageWrapper>
     </>

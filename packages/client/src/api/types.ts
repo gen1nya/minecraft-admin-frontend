@@ -10,6 +10,7 @@ export interface Player {
   uuid: string;
   isOp: boolean;
   isOnline: boolean;
+  isBanned: boolean;
   gameMode: 'SURVIVAL' | 'CREATIVE' | 'ADVENTURE' | 'SPECTATOR' | 'unknown';
 }
 

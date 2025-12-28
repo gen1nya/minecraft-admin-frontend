@@ -59,6 +59,24 @@ export const api = {
       body: JSON.stringify({ command: `deop ${player}` }),
     }),
 
+  kick: (player: string, reason?: string) =>
+    fetchJson<{ response: string }>('/rcon', {
+      method: 'POST',
+      body: JSON.stringify({ command: reason ? `kick ${player} ${reason}` : `kick ${player}` }),
+    }),
+
+  ban: (player: string, reason?: string) =>
+    fetchJson<{ response: string }>('/rcon', {
+      method: 'POST',
+      body: JSON.stringify({ command: reason ? `ban ${player} ${reason}` : `ban ${player}` }),
+    }),
+
+  pardon: (player: string) =>
+    fetchJson<{ response: string }>('/rcon', {
+      method: 'POST',
+      body: JSON.stringify({ command: `pardon ${player}` }),
+    }),
+
   lookupPlayer: (query: string) =>
     fetchJson<MojangProfile>('/mojang/profile', {
       method: 'POST',

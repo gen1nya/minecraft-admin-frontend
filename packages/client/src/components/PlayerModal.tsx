@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import styled from 'styled-components';
-import { theme, Button, StatusBadge } from '@/styles';
+import { theme, Button, StatusBadge, Input } from '@/styles';
 import { Modal } from './Modal';
 import { api, type GameMode, type Player } from '@/api';
 
@@ -115,6 +115,21 @@ const ButtonGroup = styled.div`
   gap: ${theme.spacing.sm};
 `;
 
+const ButtonRow = styled.div`
+  display: flex;
+  gap: ${theme.spacing.sm};
+`;
+
+const BanForm = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.spacing.sm};
+`;
+
+const BanInput = styled(Input)`
+  width: 100%;
+`;
+
 const GAME_MODES: { value: GameMode; label: string }[] = [
   { value: 'survival', label: 'Survival' },
   { value: 'creative', label: 'Creative' },
@@ -131,17 +146,19 @@ interface PlayerModalProps {
 export function PlayerModal({ player, onClose, onUpdate }: PlayerModalProps) {
   const [loading, setLoading] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [confirmBan, setConfirmBan] = useState(false);
+  const [banReason, setBanReason] = useState('');
 
   if (!player) return null;
 
   const currentMode = player.gameMode.toLowerCase() as GameMode;
 
-  const handleAction = async (action: string, fn: () => Promise<unknown>) => {
+  const handleAction = async (action: string, fn: () => Promise<unknown>, closeAfter = false) => {
     setLoading(action);
     try {
       await fn();
       onUpdate();
-      if (action === 'remove') {
+      if (closeAfter) {
         onClose();
       }
     } catch (err) {
@@ -149,14 +166,24 @@ export function PlayerModal({ player, onClose, onUpdate }: PlayerModalProps) {
     } finally {
       setLoading(null);
       setConfirmRemove(false);
+      setConfirmBan(false);
+      setBanReason('');
     }
   };
 
   const handleRemoveClick = () => {
     if (confirmRemove) {
-      handleAction('remove', () => api.whitelistRemove(player.name));
+      handleAction('remove', () => api.whitelistRemove(player.name), true);
     } else {
       setConfirmRemove(true);
+    }
+  };
+
+  const handleBanClick = () => {
+    if (confirmBan) {
+      handleAction('ban', () => api.ban(player.name, banReason || undefined), true);
+    } else {
+      setConfirmBan(true);
     }
   };
 
@@ -224,23 +251,82 @@ export function PlayerModal({ player, onClose, onUpdate }: PlayerModalProps) {
         </ButtonGroup>
       </Section>
 
+      {player.isOnline && (
+        <Section>
+          <SectionTitle>Quick Actions</SectionTitle>
+          <ActionButton
+            variant="secondary"
+            onClick={() => handleAction('kick', () => api.kick(player.name))}
+            disabled={loading !== null}
+          >
+            {loading === 'kick' ? 'Kicking...' : 'Kick from Server'}
+          </ActionButton>
+        </Section>
+      )}
+
       <Section>
         <SectionTitle>Danger Zone</SectionTitle>
-        <ActionButton
-          $danger
-          onClick={handleRemoveClick}
-          disabled={loading !== null}
-        >
-          {loading === 'remove'
-            ? 'Removing...'
-            : confirmRemove
-              ? 'Click again to confirm'
-              : 'Remove from Whitelist'
-          }
-        </ActionButton>
-        {confirmRemove && (
-          <WarningText>This will prevent the player from joining the server</WarningText>
-        )}
+        <ButtonGroup>
+          {player.isBanned ? (
+            <ActionButton
+              onClick={() => handleAction('pardon', () => api.pardon(player.name))}
+              disabled={loading !== null}
+            >
+              {loading === 'pardon' ? 'Unbanning...' : 'Unban Player'}
+            </ActionButton>
+          ) : confirmBan ? (
+            <BanForm>
+              <BanInput
+                type="text"
+                placeholder="Ban reason (optional)"
+                value={banReason}
+                onChange={e => setBanReason(e.target.value)}
+                disabled={loading !== null}
+                autoFocus
+              />
+              <ButtonRow>
+                <ActionButton
+                  $danger
+                  onClick={handleBanClick}
+                  disabled={loading !== null}
+                >
+                  {loading === 'ban' ? 'Banning...' : 'Confirm Ban'}
+                </ActionButton>
+                <ActionButton
+                  variant="secondary"
+                  onClick={() => setConfirmBan(false)}
+                  disabled={loading !== null}
+                >
+                  Cancel
+                </ActionButton>
+              </ButtonRow>
+            </BanForm>
+          ) : (
+            <ActionButton
+              $danger
+              onClick={handleBanClick}
+              disabled={loading !== null}
+            >
+              Ban Player
+            </ActionButton>
+          )}
+
+          <ActionButton
+            $danger
+            onClick={handleRemoveClick}
+            disabled={loading !== null}
+          >
+            {loading === 'remove'
+              ? 'Removing...'
+              : confirmRemove
+                ? 'Click again to confirm'
+                : 'Remove from Whitelist'
+            }
+          </ActionButton>
+          {confirmRemove && (
+            <WarningText>This will prevent the player from joining the server</WarningText>
+          )}
+        </ButtonGroup>
       </Section>
     </Modal>
   );

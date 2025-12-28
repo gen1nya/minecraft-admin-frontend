@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import styled from 'styled-components';
-import { theme, Card, CardHeader, CardTitle, Skeleton, Flex, StatusBadge, Button } from '@/styles';
+import { theme, Card, CardHeader, CardTitle, Skeleton, Flex, StatusBadge, Button, Input } from '@/styles';
 import { usePlayers } from '@/hooks';
 import type { Player } from '@/api';
 import { PlayerModal } from './PlayerModal';
@@ -78,6 +78,15 @@ const OpBadge = styled.span`
   color: ${theme.colors.secondary.light};
 `;
 
+const BannedBadge = styled.span`
+  padding: 2px 6px;
+  border-radius: ${theme.borderRadius.sm};
+  font-size: ${theme.typography.fontSize.xs};
+  font-weight: ${theme.typography.fontWeight.medium};
+  background: ${theme.colors.status.error}30;
+  color: ${theme.colors.status.error};
+`;
+
 const PlayerMeta = styled.div`
   font-size: ${theme.typography.fontSize.xs};
   color: ${theme.colors.text.secondary};
@@ -101,8 +110,44 @@ const OnlineCount = styled.span`
   font-weight: ${theme.typography.fontWeight.regular};
 `;
 
-const AddButton = styled(Button)`
+const Toolbar = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.spacing.sm};
   margin-bottom: ${theme.spacing.md};
+`;
+
+const SearchRow = styled.div`
+  display: flex;
+  gap: ${theme.spacing.sm};
+`;
+
+const SearchInput = styled(Input)`
+  flex: 1;
+`;
+
+const FilterRow = styled.div`
+  display: flex;
+  gap: ${theme.spacing.xs};
+`;
+
+type FilterType = 'all' | 'online' | 'banned';
+
+const FilterButton = styled.button<{ $active: boolean }>`
+  padding: ${theme.spacing.xs} ${theme.spacing.sm};
+  border-radius: ${theme.borderRadius.sm};
+  font-size: ${theme.typography.fontSize.xs};
+  font-weight: ${theme.typography.fontWeight.medium};
+  border: 1px solid ${props => props.$active ? theme.colors.primary.main : theme.colors.border.default};
+  background: ${props => props.$active ? theme.colors.primary.main : 'transparent'};
+  color: ${props => props.$active ? theme.colors.primary.contrast : theme.colors.text.secondary};
+  cursor: pointer;
+  transition: all ${theme.transitions.fast};
+
+  &:hover {
+    border-color: ${theme.colors.primary.main};
+    color: ${props => props.$active ? theme.colors.primary.contrast : theme.colors.primary.main};
+  }
 `;
 
 function getAvatarUrl(uuid: string): string {
@@ -141,17 +186,42 @@ export function PlayerList() {
   const { players, loading, error, refetch } = usePlayers();
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<FilterType>('all');
 
   const selectedPlayer = selectedPlayerId
     ? players.find(p => p.uuid === selectedPlayerId) ?? null
     : null;
 
   const onlineCount = players.filter(p => p.isOnline).length;
-  const sortedPlayers = [...players].sort((a, b) => {
-    if (a.isOnline !== b.isOnline) return a.isOnline ? -1 : 1;
-    if (a.isOp !== b.isOp) return a.isOp ? -1 : 1;
-    return a.name.localeCompare(b.name);
-  });
+  const bannedCount = players.filter(p => p.isBanned).length;
+
+  const filteredPlayers = useMemo(() => {
+    let result = [...players];
+
+    // Apply search
+    if (search.trim()) {
+      const query = search.toLowerCase().trim();
+      result = result.filter(p =>
+        p.name.toLowerCase().includes(query) ||
+        p.uuid.toLowerCase().includes(query)
+      );
+    }
+
+    // Apply filter
+    if (filter === 'online') {
+      result = result.filter(p => p.isOnline);
+    } else if (filter === 'banned') {
+      result = result.filter(p => p.isBanned);
+    }
+
+    // Sort
+    return result.sort((a, b) => {
+      if (a.isOnline !== b.isOnline) return a.isOnline ? -1 : 1;
+      if (a.isOp !== b.isOp) return a.isOp ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [players, search, filter]);
 
   return (
     <>
@@ -162,9 +232,30 @@ export function PlayerList() {
           </CardTitle>
         </CardHeader>
 
-        <AddButton onClick={() => setAddModalOpen(true)}>
-          + Add Player
-        </AddButton>
+        <Toolbar>
+          <SearchRow>
+            <SearchInput
+              type="text"
+              placeholder="Search by name or UUID..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            <Button onClick={() => setAddModalOpen(true)}>
+              + Add
+            </Button>
+          </SearchRow>
+          <FilterRow>
+            <FilterButton $active={filter === 'all'} onClick={() => setFilter('all')}>
+              All ({players.length})
+            </FilterButton>
+            <FilterButton $active={filter === 'online'} onClick={() => setFilter('online')}>
+              Online ({onlineCount})
+            </FilterButton>
+            <FilterButton $active={filter === 'banned'} onClick={() => setFilter('banned')}>
+              Banned ({bannedCount})
+            </FilterButton>
+          </FilterRow>
+        </Toolbar>
 
         {error && <ErrorText>{error}</ErrorText>}
 
@@ -174,17 +265,20 @@ export function PlayerList() {
               <Skeleton key={i} height="48px" />
             ))}
           </Flex>
-        ) : players.length === 0 ? (
-          <EmptyState>No players in whitelist</EmptyState>
+        ) : filteredPlayers.length === 0 ? (
+          <EmptyState>
+            {players.length === 0 ? 'No players in whitelist' : 'No players match your search'}
+          </EmptyState>
         ) : (
           <PlayerGrid>
-            {sortedPlayers.map(player => (
+            {filteredPlayers.map(player => (
               <PlayerRow key={player.uuid} onClick={() => setSelectedPlayerId(player.uuid)}>
                 <Avatar uuid={player.uuid} name={player.name} />
                 <PlayerInfo>
                   <PlayerName>
                     {player.name}
                     {player.isOp && <OpBadge>OP</OpBadge>}
+                    {player.isBanned && <BannedBadge>Banned</BannedBadge>}
                   </PlayerName>
                   <PlayerMeta>
                     {formatGameMode(player.gameMode) || 'Click to manage'}
