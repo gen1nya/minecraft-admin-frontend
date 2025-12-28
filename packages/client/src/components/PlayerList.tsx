@@ -10,6 +10,8 @@ const PlayerGrid = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${theme.spacing.sm};
+  max-height: 400px;
+  overflow-y: auto;
 `;
 
 const PlayerRow = styled.div`
