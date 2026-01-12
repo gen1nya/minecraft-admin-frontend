@@ -172,7 +172,7 @@ interface OutputEntry {
 }
 
 export function Console() {
-  const { api, currentServer } = useServer();
+  const { api } = useServer();
   const [command, setCommand] = useState('');
   const [loading, setLoading] = useState(false);
   const [output, setOutput] = useState<OutputEntry[]>([]);
