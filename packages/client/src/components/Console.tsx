@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import { theme, Card, CardHeader, CardTitle, Button, Input } from '@/styles';
-import { api } from '@/api';
+import { useServer } from '@/context';
 
 const ConsoleBody = styled.div`
   display: flex;
@@ -172,6 +172,7 @@ interface OutputEntry {
 }
 
 export function Console() {
+  const { api, currentServer } = useServer();
   const [command, setCommand] = useState('');
   const [loading, setLoading] = useState(false);
   const [output, setOutput] = useState<OutputEntry[]>([]);
@@ -193,7 +194,7 @@ export function Console() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const cmd = command.trim();
-    if (!cmd) return;
+    if (!cmd || !api) return;
 
     addOutput('command', `> ${cmd}`);
     setHistory(prev => [...prev.filter(h => h !== cmd), cmd]);
@@ -265,7 +266,7 @@ export function Console() {
             autoComplete="off"
             spellCheck={false}
           />
-          <Button type="submit" disabled={loading || !command.trim()}>
+          <Button type="submit" disabled={loading || !command.trim() || !api}>
             {loading ? '...' : 'Send'}
           </Button>
         </InputRow>

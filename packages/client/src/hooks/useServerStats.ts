@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { api, type ServerStats } from '@/api';
+import { useServer } from '@/context';
+import type { ServerStats } from '@/api';
 
 interface UseServerStatsResult {
   stats: ServerStats | null;
@@ -9,11 +10,18 @@ interface UseServerStatsResult {
 }
 
 export function useServerStats(pollInterval = 10000): UseServerStatsResult {
+  const { api, currentServerId } = useServer();
   const [stats, setStats] = useState<ServerStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchStats = useCallback(async () => {
+    if (!api) {
+      setStats(null);
+      setLoading(false);
+      return;
+    }
+
     try {
       const data = await api.getServerStats();
       setStats(data);
@@ -23,13 +31,14 @@ export function useServerStats(pollInterval = 10000): UseServerStatsResult {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [api]);
 
   useEffect(() => {
+    setLoading(true);
     fetchStats();
     const interval = setInterval(fetchStats, pollInterval);
     return () => clearInterval(interval);
-  }, [fetchStats, pollInterval]);
+  }, [fetchStats, pollInterval, currentServerId]);
 
   return { stats, loading, error, refetch: fetchStats };
 }

@@ -27,3 +27,6 @@ Thumbs.db
 *.local
 .pnp
 .pnp.js
+
+# Server config (contains credentials)
+packages/server/servers.json

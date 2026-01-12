@@ -1,6 +1,7 @@
 import styled from 'styled-components';
 import { Container, PageWrapper, theme } from '@/styles';
-import { ServerStats, PlayerList, Console } from '@/components';
+import { ServerStats, PlayerList, Console, ServerSelector } from '@/components';
+import { ServerProvider } from '@/context';
 
 const Header = styled.header`
   background: ${theme.colors.background.secondary};
@@ -11,6 +12,7 @@ const Header = styled.header`
 const HeaderContent = styled.div`
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: ${theme.spacing.md};
 `;
 
@@ -35,7 +37,7 @@ const DashboardGrid = styled.div`
   }
 `;
 
-export function App() {
+function AppContent() {
   return (
     <>
       <Header>
@@ -44,6 +46,7 @@ export function App() {
             <Logo>
               Minecraft <LogoAccent>Admin</LogoAccent>
             </Logo>
+            <ServerSelector />
           </HeaderContent>
         </Container>
       </Header>
@@ -58,5 +61,13 @@ export function App() {
         </Container>
       </PageWrapper>
     </>
+  );
+}
+
+export function App() {
+  return (
+    <ServerProvider>
+      <AppContent />
+    </ServerProvider>
   );
 }

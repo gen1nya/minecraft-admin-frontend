@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { api, type Player } from '@/api';
+import { useServer } from '@/context';
+import type { Player } from '@/api';
 
 interface UsePlayersResult {
   players: Player[];
@@ -9,11 +10,18 @@ interface UsePlayersResult {
 }
 
 export function usePlayers(pollInterval = 10000): UsePlayersResult {
+  const { api, currentServerId } = useServer();
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchPlayers = useCallback(async () => {
+    if (!api) {
+      setPlayers([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       const data = await api.getPlayers();
       setPlayers(data);
@@ -23,13 +31,14 @@ export function usePlayers(pollInterval = 10000): UsePlayersResult {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [api]);
 
   useEffect(() => {
+    setLoading(true);
     fetchPlayers();
     const interval = setInterval(fetchPlayers, pollInterval);
     return () => clearInterval(interval);
-  }, [fetchPlayers, pollInterval]);
+  }, [fetchPlayers, pollInterval, currentServerId]);
 
   return { players, loading, error, refetch: fetchPlayers };
 }

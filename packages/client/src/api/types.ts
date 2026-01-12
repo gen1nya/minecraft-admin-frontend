@@ -21,3 +21,17 @@ export interface MojangProfile {
   id: string;
   name: string;
 }
+
+export interface Server {
+  id: string;
+  name: string;
+  host: string;
+  port: number;
+  rconPort: number;
+  rconPassword: string; // Will be '***' when fetched from API
+}
+
+export interface ServerConnectionTest {
+  success: boolean;
+  message: string;
+}

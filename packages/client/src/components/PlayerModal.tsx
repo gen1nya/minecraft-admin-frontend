@@ -2,7 +2,8 @@ import { useState } from 'react';
 import styled from 'styled-components';
 import { theme, Button, StatusBadge, Input } from '@/styles';
 import { Modal } from './Modal';
-import { api, type GameMode, type Player } from '@/api';
+import { useServer } from '@/context';
+import type { GameMode, Player } from '@/api';
 
 const PlayerHeader = styled.div`
   display: flex;
@@ -144,12 +145,13 @@ interface PlayerModalProps {
 }
 
 export function PlayerModal({ player, onClose, onUpdate }: PlayerModalProps) {
+  const { api } = useServer();
   const [loading, setLoading] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [confirmBan, setConfirmBan] = useState(false);
   const [banReason, setBanReason] = useState('');
 
-  if (!player) return null;
+  if (!player || !api) return null;
 
   const currentMode = player.gameMode.toLowerCase() as GameMode;
 
