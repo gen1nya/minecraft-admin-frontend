@@ -116,6 +116,11 @@ export function Chat() {
   const messagesRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Clear local messages when server changes
+  useEffect(() => {
+    setLocalMessages([]);
+  }, [currentServerId]);
+
   // Combine and sort messages
   const allMessages = [
     ...messages.map(m => ({ ...m, type: 'player' as const })),

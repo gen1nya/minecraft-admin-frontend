@@ -172,7 +172,7 @@ interface OutputEntry {
 }
 
 export function Console() {
-  const { api } = useServer();
+  const { api, currentServerId } = useServer();
   const [command, setCommand] = useState('');
   const [loading, setLoading] = useState(false);
   const [output, setOutput] = useState<OutputEntry[]>([]);
@@ -180,6 +180,12 @@ export function Console() {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const outputRef = useRef<HTMLDivElement>(null);
   const idRef = useRef(0);
+
+  // Clear output when server changes
+  useEffect(() => {
+    setOutput([]);
+    idRef.current = 0;
+  }, [currentServerId]);
 
   useEffect(() => {
     if (outputRef.current) {
