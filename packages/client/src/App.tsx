@@ -1,6 +1,6 @@
 import styled from 'styled-components';
 import { Container, PageWrapper, theme } from '@/styles';
-import { ServerStats, PlayerList, Console, ServerSelector } from '@/components';
+import { ServerStats, PlayerList, Console, Chat, ServerSelector } from '@/components';
 import { ServerProvider } from '@/context';
 
 const Header = styled.header`
@@ -57,7 +57,10 @@ function AppContent() {
             <ServerStats />
             <PlayerList />
           </DashboardGrid>
-          <Console />
+          <DashboardGrid>
+            <Console />
+            <Chat />
+          </DashboardGrid>
         </Container>
       </PageWrapper>
     </>

@@ -1,14 +1,72 @@
 import express from 'express';
 import cors from 'cors';
+import { createServer } from 'http';
+import { WebSocketServer, WebSocket } from 'ws';
 import { config } from 'dotenv';
 import { serverManager, ServerConfig } from './ServerManager';
+import { chatManager, ChatMessage } from './ChatManager';
 
 // Load .env for local development (in Docker, env vars come from compose)
 config({ path: '../../.env' });
 config();
 
 const app = express();
+const server = createServer(app);
+const wss = new WebSocketServer({ server, path: '/ws' });
+
 const PORT = process.env.PORT || 3001;
+
+// Track WebSocket subscriptions by serverId
+const serverSubscriptions = new Map<string, Set<WebSocket>>();
+
+wss.on('connection', (ws) => {
+  let subscribedServerId: string | null = null;
+
+  ws.on('message', (data) => {
+    try {
+      const msg = JSON.parse(data.toString());
+
+      if (msg.type === 'subscribe' && msg.serverId) {
+        // Unsubscribe from previous server
+        if (subscribedServerId) {
+          serverSubscriptions.get(subscribedServerId)?.delete(ws);
+        }
+
+        // Subscribe to new server
+        subscribedServerId = msg.serverId;
+        if (!serverSubscriptions.has(subscribedServerId)) {
+          serverSubscriptions.set(subscribedServerId, new Set());
+        }
+        serverSubscriptions.get(subscribedServerId)!.add(ws);
+
+        // Send recent messages
+        const recentMessages = chatManager.getMessages(subscribedServerId);
+        ws.send(JSON.stringify({ type: 'history', messages: recentMessages }));
+      }
+    } catch (e) {
+      // Ignore invalid messages
+    }
+  });
+
+  ws.on('close', () => {
+    if (subscribedServerId) {
+      serverSubscriptions.get(subscribedServerId)?.delete(ws);
+    }
+  });
+});
+
+// Broadcast chat messages to subscribed clients
+chatManager.on('message', (message: ChatMessage) => {
+  const subscribers = serverSubscriptions.get(message.serverId);
+  if (subscribers) {
+    const payload = JSON.stringify({ type: 'chat', message });
+    subscribers.forEach((ws) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(payload);
+      }
+    });
+  }
+});
 
 app.use(cors());
 app.use(express.json());
@@ -187,6 +245,29 @@ app.post('/api/rcon', async (req, res) => {
   }
 });
 
+// ==================== Chat Webhook ====================
+
+// Receive chat messages from Minecraft plugin
+app.post('/api/servers/:serverId/chat/webhook', (req, res) => {
+  const { serverId } = req.params;
+  const { player, playerUuid, message } = req.body;
+
+  if (!player || !message) {
+    return res.status(400).json({ error: 'Missing required fields: player, message' });
+  }
+
+  const chatMessage = chatManager.addMessage(serverId, player, playerUuid || '', message);
+  res.status(201).json(chatMessage);
+});
+
+// Get chat history
+app.get('/api/servers/:serverId/chat', (req, res) => {
+  const { serverId } = req.params;
+  const limit = parseInt(req.query.limit as string) || 50;
+  const messages = chatManager.getMessages(serverId, limit);
+  res.json(messages);
+});
+
 // ==================== Mojang API ====================
 
 app.post('/api/mojang/profile', async (req, res) => {
@@ -226,7 +307,8 @@ app.post('/api/mojang/profile', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`WebSocket available at ws://localhost:${PORT}/ws`);
   console.log(`Configured servers: ${serverManager.getServers().map(s => s.name).join(', ') || 'none'}`);
 });
