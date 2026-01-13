@@ -45,6 +45,16 @@ export class ChatManager extends EventEmitter {
     return messages.slice(-limit);
   }
 
+  getAllMessages(limit = 100): ChatMessage[] {
+    const allMessages: ChatMessage[] = [];
+    for (const messages of this.messages.values()) {
+      allMessages.push(...messages);
+    }
+    return allMessages
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+      .slice(-limit);
+  }
+
   clearMessages(serverId: string): void {
     this.messages.delete(serverId);
   }

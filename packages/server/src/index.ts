@@ -16,57 +16,29 @@ const wss = new WebSocketServer({ server, path: '/ws' });
 
 const PORT = process.env.PORT || 3001;
 
-// Track WebSocket subscriptions by serverId
-const serverSubscriptions = new Map<string, Set<WebSocket>>();
+// All connected WebSocket clients
+const clients = new Set<WebSocket>();
 
 wss.on('connection', (ws) => {
-  let subscribedServerId: string | null = null;
+  clients.add(ws);
 
-  ws.on('message', (data) => {
-    try {
-      const msg = JSON.parse(data.toString());
-
-      if (msg.type === 'subscribe' && msg.serverId) {
-        // Unsubscribe from previous server
-        if (subscribedServerId) {
-          serverSubscriptions.get(subscribedServerId)?.delete(ws);
-        }
-
-        // Subscribe to new server
-        const newServerId: string = msg.serverId;
-        subscribedServerId = newServerId;
-        if (!serverSubscriptions.has(newServerId)) {
-          serverSubscriptions.set(newServerId, new Set());
-        }
-        serverSubscriptions.get(newServerId)!.add(ws);
-
-        // Send recent messages
-        const recentMessages = chatManager.getMessages(newServerId);
-        ws.send(JSON.stringify({ type: 'history', messages: recentMessages }));
-      }
-    } catch (e) {
-      // Ignore invalid messages
-    }
-  });
+  // Send chat history for all servers on connect
+  const history = chatManager.getAllMessages();
+  ws.send(JSON.stringify({ type: 'history', messages: history }));
 
   ws.on('close', () => {
-    if (subscribedServerId) {
-      serverSubscriptions.get(subscribedServerId)?.delete(ws);
-    }
+    clients.delete(ws);
   });
 });
 
-// Broadcast chat messages to subscribed clients
+// Broadcast chat messages to all connected clients
 chatManager.on('message', (message: ChatMessage) => {
-  const subscribers = serverSubscriptions.get(message.serverId);
-  if (subscribers) {
-    const payload = JSON.stringify({ type: 'chat', message });
-    subscribers.forEach((ws) => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(payload);
-      }
-    });
-  }
+  const payload = JSON.stringify({ type: 'chat', message });
+  clients.forEach((ws) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(payload);
+    }
+  });
 });
 
 app.use(cors());

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 
 export interface ChatMessage {
   id: string;
@@ -9,77 +9,97 @@ export interface ChatMessage {
   timestamp: string;
 }
 
-export function useChat(serverId: string | null) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [connected, setConnected] = useState(false);
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<number>();
+// Global message store (shared across hook instances)
+let globalMessages: ChatMessage[] = [];
+let globalWs: WebSocket | null = null;
+let globalConnected = false;
+const listeners = new Set<() => void>();
 
-  const connect = useCallback(() => {
-    if (!serverId) return;
+function notifyListeners() {
+  listeners.forEach((fn) => fn());
+}
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+function addMessage(msg: ChatMessage) {
+  // Deduplicate by id
+  if (!globalMessages.some((m) => m.id === msg.id)) {
+    globalMessages = [...globalMessages, msg];
+    notifyListeners();
+  }
+}
 
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
+function setMessages(msgs: ChatMessage[]) {
+  // Deduplicate and merge with existing
+  const existingIds = new Set(globalMessages.map((m) => m.id));
+  const newMsgs = msgs.filter((m) => !existingIds.has(m.id));
+  if (newMsgs.length > 0) {
+    globalMessages = [...globalMessages, ...newMsgs].sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+    notifyListeners();
+  }
+}
 
-    ws.onopen = () => {
-      setConnected(true);
-      ws.send(JSON.stringify({ type: 'subscribe', serverId }));
-    };
+function connect() {
+  if (globalWs?.readyState === WebSocket.OPEN || globalWs?.readyState === WebSocket.CONNECTING) {
+    return;
+  }
 
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${window.location.host}/ws`;
 
-        if (data.type === 'history') {
-          setMessages(data.messages);
-        } else if (data.type === 'chat') {
-          setMessages((prev) => [...prev, data.message]);
-        }
-      } catch (e) {
-        // Ignore invalid messages
+  const ws = new WebSocket(wsUrl);
+  globalWs = ws;
+
+  ws.onopen = () => {
+    globalConnected = true;
+    notifyListeners();
+  };
+
+  ws.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+
+      if (data.type === 'history' && Array.isArray(data.messages)) {
+        setMessages(data.messages);
+      } else if (data.type === 'chat' && data.message) {
+        addMessage(data.message);
       }
-    };
-
-    ws.onclose = () => {
-      setConnected(false);
-      // Reconnect after 3 seconds
-      reconnectTimeoutRef.current = window.setTimeout(() => {
-        connect();
-      }, 3000);
-    };
-
-    ws.onerror = () => {
-      ws.close();
-    };
-  }, [serverId]);
-
-  useEffect(() => {
-    connect();
-
-    return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
-    };
-  }, [connect]);
-
-  // Clear messages when server changes
-  useEffect(() => {
-    setMessages([]);
-  }, [serverId]);
-
-  // Resubscribe when serverId changes (if already connected)
-  useEffect(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN && serverId) {
-      wsRef.current.send(JSON.stringify({ type: 'subscribe', serverId }));
+    } catch (e) {
+      // Ignore invalid messages
     }
-  }, [serverId]);
+  };
 
-  return { messages, connected };
+  ws.onclose = () => {
+    globalConnected = false;
+    globalWs = null;
+    notifyListeners();
+    // Reconnect after 3 seconds
+    setTimeout(connect, 3000);
+  };
+
+  ws.onerror = () => {
+    ws.close();
+  };
+}
+
+// Start connection immediately
+connect();
+
+export function useChat(serverId: string | null) {
+  const [, forceUpdate] = useState({});
+
+  useEffect(() => {
+    const listener = () => forceUpdate({});
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  }, []);
+
+  // Filter messages by current serverId
+  const messages = serverId
+    ? globalMessages.filter((m) => m.serverId === serverId)
+    : [];
+
+  return { messages, connected: globalConnected };
 }
