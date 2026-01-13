@@ -69,10 +69,14 @@ export function useChat(serverId: string | null) {
     };
   }, [connect]);
 
-  // Resubscribe when serverId changes
+  // Clear messages when server changes
+  useEffect(() => {
+    setMessages([]);
+  }, [serverId]);
+
+  // Resubscribe when serverId changes (if already connected)
   useEffect(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN && serverId) {
-      setMessages([]);
       wsRef.current.send(JSON.stringify({ type: 'subscribe', serverId }));
     }
   }, [serverId]);
