@@ -1,6 +1,6 @@
-import { useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
-import { theme, Card, CardHeader, CardTitle } from '@/styles';
+import { theme, Card, CardHeader, CardTitle, Button, Input } from '@/styles';
 import { useServer } from '@/context';
 import { useChat } from '@/hooks/useChat';
 
@@ -48,6 +48,23 @@ const MessageText = styled.span`
   word-break: break-word;
 `;
 
+const AdminMessage = styled.div`
+  display: flex;
+  gap: ${theme.spacing.sm};
+  margin-bottom: ${theme.spacing.xs};
+  opacity: 0.7;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const AdminTag = styled.span`
+  color: ${theme.colors.secondary.light};
+  font-weight: ${theme.typography.fontWeight.medium};
+  flex-shrink: 0;
+`;
+
 const EmptyState = styled.div`
   color: ${theme.colors.text.disabled};
   text-align: center;
@@ -66,7 +83,17 @@ const StatusDot = styled.span<{ $connected: boolean }>`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: ${props => props.$connected ? theme.colors.status.success : theme.colors.status.error};
+  background: ${props => props.$connected ? theme.colors.status.online : theme.colors.status.error};
+`;
+
+const InputRow = styled.form`
+  display: flex;
+  gap: ${theme.spacing.sm};
+`;
+
+const MessageInput = styled(Input)`
+  flex: 1;
+  font-family: ${theme.typography.fontFamily.mono};
 `;
 
 function formatTime(timestamp: string): string {
@@ -74,16 +101,57 @@ function formatTime(timestamp: string): string {
   return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 }
 
+interface LocalMessage {
+  id: string;
+  text: string;
+  timestamp: string;
+}
+
 export function Chat() {
-  const { currentServerId } = useServer();
+  const { currentServerId, api } = useServer();
   const { messages, connected } = useChat(currentServerId);
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [localMessages, setLocalMessages] = useState<LocalMessage[]>([]);
   const messagesRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Combine and sort messages
+  const allMessages = [
+    ...messages.map(m => ({ ...m, type: 'player' as const })),
+    ...localMessages.map(m => ({ ...m, type: 'admin' as const })),
+  ].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
   useEffect(() => {
     if (messagesRef.current) {
       messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [allMessages.length]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const msg = message.trim();
+    if (!msg || !api) return;
+
+    const localMsg: LocalMessage = {
+      id: `local_${Date.now()}`,
+      text: msg,
+      timestamp: new Date().toISOString(),
+    };
+
+    setSending(true);
+    setMessage('');
+
+    try {
+      await api.sendCommand(`say ${msg}`);
+      setLocalMessages(prev => [...prev, localMsg]);
+    } catch (err) {
+      console.error('Failed to send message:', err);
+    } finally {
+      setSending(false);
+      setTimeout(() => inputRef.current?.focus(), 0);
+    }
+  };
 
   return (
     <Card>
@@ -96,18 +164,39 @@ export function Chat() {
       </CardHeader>
       <ChatBody>
         <MessagesArea ref={messagesRef}>
-          {messages.length === 0 ? (
+          {allMessages.length === 0 ? (
             <EmptyState>No messages yet</EmptyState>
           ) : (
-            messages.map((msg) => (
-              <MessageRow key={msg.id}>
-                <Timestamp>[{formatTime(msg.timestamp)}]</Timestamp>
-                <PlayerName>&lt;{msg.player}&gt;</PlayerName>
-                <MessageText>{msg.message}</MessageText>
-              </MessageRow>
+            allMessages.map((msg) => (
+              msg.type === 'player' ? (
+                <MessageRow key={msg.id}>
+                  <Timestamp>[{formatTime(msg.timestamp)}]</Timestamp>
+                  <PlayerName>&lt;{msg.player}&gt;</PlayerName>
+                  <MessageText>{msg.message}</MessageText>
+                </MessageRow>
+              ) : (
+                <AdminMessage key={msg.id}>
+                  <Timestamp>[{formatTime(msg.timestamp)}]</Timestamp>
+                  <AdminTag>[Server]</AdminTag>
+                  <MessageText>{msg.text}</MessageText>
+                </AdminMessage>
+              )
             ))
           )}
         </MessagesArea>
+        <InputRow onSubmit={handleSubmit}>
+          <MessageInput
+            ref={inputRef}
+            type="text"
+            placeholder="Send message to game..."
+            value={message}
+            onChange={e => setMessage(e.target.value)}
+            disabled={sending || !api}
+          />
+          <Button type="submit" disabled={sending || !message.trim() || !api}>
+            {sending ? '...' : 'Send'}
+          </Button>
+        </InputRow>
       </ChatBody>
     </Card>
   );

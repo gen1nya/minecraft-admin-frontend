@@ -33,14 +33,15 @@ wss.on('connection', (ws) => {
         }
 
         // Subscribe to new server
-        subscribedServerId = msg.serverId;
-        if (!serverSubscriptions.has(subscribedServerId)) {
-          serverSubscriptions.set(subscribedServerId, new Set());
+        const newServerId: string = msg.serverId;
+        subscribedServerId = newServerId;
+        if (!serverSubscriptions.has(newServerId)) {
+          serverSubscriptions.set(newServerId, new Set());
         }
-        serverSubscriptions.get(subscribedServerId)!.add(ws);
+        serverSubscriptions.get(newServerId)!.add(ws);
 
         // Send recent messages
-        const recentMessages = chatManager.getMessages(subscribedServerId);
+        const recentMessages = chatManager.getMessages(newServerId);
         ws.send(JSON.stringify({ type: 'history', messages: recentMessages }));
       }
     } catch (e) {

@@ -38,6 +38,15 @@ RUN echo 'server { \
         proxy_set_header Host $host; \
         proxy_set_header X-Real-IP $remote_addr; \
     } \
+    location /ws { \
+        proxy_pass http://mc-admin-server:3001; \
+        proxy_http_version 1.1; \
+        proxy_set_header Upgrade $http_upgrade; \
+        proxy_set_header Connection "upgrade"; \
+        proxy_set_header Host $host; \
+        proxy_set_header X-Real-IP $remote_addr; \
+        proxy_read_timeout 86400; \
+    } \
 }' > /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
