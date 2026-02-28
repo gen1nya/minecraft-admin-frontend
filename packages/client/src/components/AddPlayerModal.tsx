@@ -2,8 +2,9 @@ import { useState } from 'react';
 import styled from 'styled-components';
 import { theme, Button, Input } from '@/styles';
 import { Modal } from './Modal';
-import { api } from '@/api';
+import { mojangApi } from '@/api';
 import type { MojangProfile } from '@/api';
+import { useServer } from '@/context';
 
 const SearchForm = styled.form`
   display: flex;
@@ -95,6 +96,7 @@ function formatUuid(id: string): string {
 }
 
 export function AddPlayerModal({ open, onClose, onSuccess, existingPlayerIds }: AddPlayerModalProps) {
+  const { api } = useServer();
   const [query, setQuery] = useState('');
   const [state, setState] = useState<ModalState>('idle');
   const [profile, setProfile] = useState<MojangProfile | null>(null);
@@ -111,7 +113,7 @@ export function AddPlayerModal({ open, onClose, onSuccess, existingPlayerIds }: 
     setProfile(null);
 
     try {
-      const result = await api.lookupPlayer(query.trim());
+      const result = await mojangApi.lookupPlayer(query.trim());
       setProfile(result);
       setState('found');
     } catch {
@@ -120,7 +122,7 @@ export function AddPlayerModal({ open, onClose, onSuccess, existingPlayerIds }: 
   };
 
   const handleAdd = async () => {
-    if (!profile) return;
+    if (!profile || !api) return;
 
     setState('adding');
     try {
