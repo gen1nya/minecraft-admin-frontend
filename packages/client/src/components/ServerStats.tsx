@@ -5,7 +5,8 @@ import { useServerStats } from '@/hooks';
 const StatsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: ${theme.spacing.md};
+  gap: ${theme.spacing.sm};
+  margin-top: ${theme.spacing.md};
 
   @media (max-width: ${theme.breakpoints.mobile}) {
     grid-template-columns: 1fr;
@@ -14,6 +15,7 @@ const StatsGrid = styled.div`
 
 const StatItem = styled.div`
   background: ${theme.colors.background.tertiary};
+  border: 1px solid ${theme.colors.border.default};
   padding: ${theme.spacing.md};
   border-radius: ${theme.borderRadius.md};
 `;
@@ -27,7 +29,7 @@ const StatLabel = styled.div`
 `;
 
 const StatValue = styled.div`
-  font-size: ${theme.typography.fontSize.xl};
+  font-size: ${theme.typography.fontSize.lg};
   font-weight: ${theme.typography.fontWeight.bold};
   color: ${theme.colors.text.primary};
 `;
@@ -45,10 +47,11 @@ const MemoryLabel = styled.div`
 `;
 
 const MemoryTrack = styled.div`
-  height: 8px;
+  height: 10px;
   background: ${theme.colors.background.tertiary};
-  border-radius: ${theme.borderRadius.sm};
+  border-radius: 999px;
   overflow: hidden;
+  border: 1px solid ${theme.colors.border.default};
 `;
 
 const MemoryFill = styled.div<{ percent: number }>`
@@ -60,7 +63,7 @@ const MemoryFill = styled.div<{ percent: number }>`
       : props.percent > 60
         ? theme.colors.status.warning
         : theme.colors.primary.main};
-  border-radius: ${theme.borderRadius.sm};
+  border-radius: 999px;
   transition: width ${theme.transitions.normal};
 `;
 
@@ -98,6 +101,7 @@ const TpsGrid = styled.div`
 
 const TpsItem = styled.div`
   background: ${theme.colors.background.tertiary};
+  border: 1px solid ${theme.colors.border.default};
   padding: ${theme.spacing.sm};
   border-radius: ${theme.borderRadius.sm};
   text-align: center;
@@ -114,11 +118,41 @@ const TpsNumber = styled.div`
   font-weight: ${theme.typography.fontWeight.bold};
 `;
 
+const SummaryPanel = styled.div`
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: ${theme.spacing.md};
+  padding: ${theme.spacing.lg};
+  border: 1px solid ${theme.colors.border.default};
+  border-radius: ${theme.borderRadius.lg};
+  background:
+    linear-gradient(135deg, rgba(101, 163, 58, 0.16), transparent 55%),
+    ${theme.colors.background.tertiary};
+
+  @media (max-width: ${theme.breakpoints.mobile}) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const SummaryLabel = styled.div`
+  font-size: ${theme.typography.fontSize.sm};
+  color: ${theme.colors.text.secondary};
+  margin-bottom: ${theme.spacing.xs};
+`;
+
+const SummaryValue = styled.div`
+  font-size: ${theme.typography.fontSize.xxl};
+  line-height: ${theme.typography.lineHeight.tight};
+  font-weight: ${theme.typography.fontWeight.bold};
+  color: ${theme.colors.text.primary};
+`;
+
 export function ServerStats() {
   const { stats, loading, error } = useServerStats(5000);
 
   const memoryPercent = stats
-    ? Math.round((stats.memoryUsedMB / stats.memoryAllocatedMB) * 100)
+    ? Math.min(100, Math.round((stats.memoryUsedMB / Math.max(stats.memoryAllocatedMB, 1)) * 100))
     : 0;
 
   const isOnline = stats !== null && !error;
@@ -134,8 +168,6 @@ export function ServerStats() {
         </HeaderRow>
       </CardHeader>
 
-      {stats && <Version>{stats.version}</Version>}
-
       {error && <ErrorText>{error}</ErrorText>}
 
       {loading && !stats ? (
@@ -145,10 +177,18 @@ export function ServerStats() {
         </Flex>
       ) : stats ? (
         <>
+          <SummaryPanel>
+            <div>
+              <SummaryLabel>Players Online</SummaryLabel>
+              <SummaryValue>{stats.onlinePlayers}</SummaryValue>
+            </div>
+            <Version>{stats.version}</Version>
+          </SummaryPanel>
+
           <StatsGrid>
             <StatItem>
-              <StatLabel>Players Online</StatLabel>
-              <StatValue>{stats.onlinePlayers}</StatValue>
+              <StatLabel>Memory Used</StatLabel>
+              <StatValue>{stats.memoryUsedMB} MB</StatValue>
             </StatItem>
             <StatItem>
               <StatLabel>Memory Usage</StatLabel>

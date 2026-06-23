@@ -10,6 +10,10 @@ const SearchForm = styled.form`
   display: flex;
   gap: ${theme.spacing.sm};
   margin-bottom: ${theme.spacing.lg};
+
+  @media (max-width: ${theme.breakpoints.mobile}) {
+    flex-direction: column;
+  }
 `;
 
 const SearchInput = styled(Input)`
@@ -22,6 +26,7 @@ const PlayerPreview = styled.div`
   gap: ${theme.spacing.md};
   padding: ${theme.spacing.md};
   background: ${theme.colors.background.tertiary};
+  border: 1px solid ${theme.colors.border.default};
   border-radius: ${theme.borderRadius.md};
   margin-bottom: ${theme.spacing.lg};
 `;

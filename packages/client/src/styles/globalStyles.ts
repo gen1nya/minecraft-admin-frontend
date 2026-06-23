@@ -20,7 +20,12 @@ export const GlobalStyles = createGlobalStyle`
     font-size: ${theme.typography.fontSize.md};
     line-height: ${theme.typography.lineHeight.normal};
     color: ${theme.colors.text.primary};
-    background-color: ${theme.colors.background.primary};
+    background:
+      linear-gradient(180deg, rgba(101, 163, 58, 0.07) 0, transparent 220px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+      ${theme.colors.background.primary};
+    background-size: auto, 48px 48px, 48px 48px, auto;
     min-height: 100vh;
   }
 
@@ -85,6 +90,10 @@ export const GlobalStyles = createGlobalStyle`
     cursor: pointer;
     border: none;
     background: none;
+  }
+
+  input, select, textarea, button {
+    letter-spacing: 0;
   }
 
   /* Remove autofill styles */

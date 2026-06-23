@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 export interface ChatMessage {
   id: string;
@@ -9,97 +9,165 @@ export interface ChatMessage {
   timestamp: string;
 }
 
-// Global message store (shared across hook instances)
-let globalMessages: ChatMessage[] = [];
-let globalWs: WebSocket | null = null;
-let globalConnected = false;
+const MAX_MESSAGES = 500;
+const RECONNECT_DELAY_MS = 3000;
+
+let messages: ChatMessage[] = [];
+let ws: WebSocket | null = null;
+let connected = false;
+let reconnectTimer: number | null = null;
+
 const listeners = new Set<() => void>();
 
 function notifyListeners() {
-  listeners.forEach((fn) => fn());
+  listeners.forEach((listener) => listener());
 }
 
-function addMessage(msg: ChatMessage) {
-  // Deduplicate by id
-  if (!globalMessages.some((m) => m.id === msg.id)) {
-    globalMessages = [...globalMessages, msg];
-    notifyListeners();
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isChatMessage(value: unknown): value is ChatMessage {
+  return (
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    typeof value.serverId === 'string' &&
+    typeof value.player === 'string' &&
+    typeof value.playerUuid === 'string' &&
+    typeof value.message === 'string' &&
+    typeof value.timestamp === 'string'
+  );
+}
+
+function trimMessages(nextMessages: ChatMessage[]): ChatMessage[] {
+  return nextMessages
+    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+    .slice(-MAX_MESSAGES);
+}
+
+function addMessage(message: ChatMessage) {
+  if (messages.some((existing) => existing.id === message.id)) return;
+
+  messages = trimMessages([...messages, message]);
+  notifyListeners();
+}
+
+function mergeHistory(history: ChatMessage[]) {
+  const existingIds = new Set(messages.map((message) => message.id));
+  const newMessages = history.filter((message) => !existingIds.has(message.id));
+
+  if (newMessages.length === 0) return;
+
+  messages = trimMessages([...messages, ...newMessages]);
+  notifyListeners();
+}
+
+function getWebSocketUrl(): string {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${protocol}//${window.location.host}/ws`;
+}
+
+function clearReconnectTimer() {
+  if (reconnectTimer !== null) {
+    window.clearTimeout(reconnectTimer);
+    reconnectTimer = null;
   }
 }
 
-function setMessages(msgs: ChatMessage[]) {
-  // Deduplicate and merge with existing
-  const existingIds = new Set(globalMessages.map((m) => m.id));
-  const newMsgs = msgs.filter((m) => !existingIds.has(m.id));
-  if (newMsgs.length > 0) {
-    globalMessages = [...globalMessages, ...newMsgs].sort(
-      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    );
-    notifyListeners();
+function scheduleReconnect() {
+  if (listeners.size === 0 || reconnectTimer !== null) return;
+
+  reconnectTimer = window.setTimeout(() => {
+    reconnectTimer = null;
+    connect();
+  }, RECONNECT_DELAY_MS);
+}
+
+function handleMessage(event: MessageEvent) {
+  try {
+    const payload = JSON.parse(event.data) as unknown;
+    if (!isRecord(payload) || typeof payload.type !== 'string') return;
+
+    if (payload.type === 'history' && Array.isArray(payload.messages)) {
+      mergeHistory(payload.messages.filter(isChatMessage));
+      return;
+    }
+
+    if (payload.type === 'chat' && isChatMessage(payload.message)) {
+      addMessage(payload.message);
+    }
+  } catch {
+    // Ignore malformed WebSocket payloads.
   }
 }
 
 function connect() {
-  if (globalWs?.readyState === WebSocket.OPEN || globalWs?.readyState === WebSocket.CONNECTING) {
-    return;
-  }
+  if (listeners.size === 0) return;
+  if (ws?.readyState === WebSocket.OPEN || ws?.readyState === WebSocket.CONNECTING) return;
 
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${protocol}//${window.location.host}/ws`;
+  clearReconnectTimer();
 
-  const ws = new WebSocket(wsUrl);
-  globalWs = ws;
+  const socket = new WebSocket(getWebSocketUrl());
+  ws = socket;
 
-  ws.onopen = () => {
-    globalConnected = true;
+  socket.onopen = () => {
+    if (ws !== socket) return;
+
+    connected = true;
     notifyListeners();
   };
 
-  ws.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data);
+  socket.onmessage = handleMessage;
 
-      if (data.type === 'history' && Array.isArray(data.messages)) {
-        setMessages(data.messages);
-      } else if (data.type === 'chat' && data.message) {
-        addMessage(data.message);
-      }
-    } catch (e) {
-      // Ignore invalid messages
-    }
-  };
+  socket.onclose = () => {
+    if (ws !== socket) return;
 
-  ws.onclose = () => {
-    globalConnected = false;
-    globalWs = null;
+    connected = false;
+    ws = null;
     notifyListeners();
-    // Reconnect after 3 seconds
-    setTimeout(connect, 3000);
+    scheduleReconnect();
   };
 
-  ws.onerror = () => {
-    ws.close();
+  socket.onerror = () => {
+    socket.close();
   };
 }
 
-// Start connection immediately
-connect();
+function disconnectIfIdle() {
+  if (listeners.size > 0) return;
+
+  clearReconnectTimer();
+
+  if (ws) {
+    const socket = ws;
+    ws = null;
+    socket.onclose = null;
+    socket.onerror = null;
+    socket.close();
+  }
+
+  connected = false;
+}
 
 export function useChat(serverId: string | null) {
-  const [, forceUpdate] = useState({});
+  const [version, setVersion] = useState(0);
 
   useEffect(() => {
-    const listener = () => forceUpdate({});
+    const listener = () => setVersion((current) => current + 1);
+
     listeners.add(listener);
+    connect();
+
     return () => {
       listeners.delete(listener);
+      disconnectIfIdle();
     };
   }, []);
 
-  // Filter messages by current serverId
-  const messages = serverId
-    ? globalMessages.filter((m) => m.serverId === serverId)
-    : [];
+  const serverMessages = useMemo(() => {
+    if (!serverId) return [];
+    return messages.filter((message) => message.serverId === serverId);
+  }, [serverId, version]);
 
-  return { messages, connected: globalConnected };
+  return { messages: serverMessages, connected };
 }

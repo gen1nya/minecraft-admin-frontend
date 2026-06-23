@@ -48,6 +48,10 @@ const Row = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: ${theme.spacing.md};
+
+  @media (max-width: ${theme.breakpoints.mobile}) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const ButtonRow = styled.div`
@@ -55,6 +59,10 @@ const ButtonRow = styled.div`
   gap: ${theme.spacing.md};
   justify-content: flex-end;
   margin-top: ${theme.spacing.md};
+
+  @media (max-width: ${theme.breakpoints.mobile}) {
+    flex-direction: column-reverse;
+  }
 `;
 
 const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'success' }>`
@@ -119,6 +127,7 @@ const ServerItem = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: ${theme.spacing.md};
   padding: ${theme.spacing.sm} ${theme.spacing.md};
   background: ${theme.colors.background.tertiary};
   border-radius: ${theme.borderRadius.md};
@@ -204,6 +213,7 @@ export function AddServerModal({ onClose }: AddServerModalProps) {
   const handleTest = async () => {
     setLoading(true);
     setTestResult(null);
+    let temporaryServerId: string | null = null;
 
     try {
       // First add the server temporarily
@@ -214,6 +224,7 @@ export function AddServerModal({ onClose }: AddServerModalProps) {
         rconPort: parseInt(rconPort),
         rconPassword,
       });
+      temporaryServerId = server.id;
 
       // Test connection
       const result = await serversApi.testConnection(server.id);
@@ -228,6 +239,14 @@ export function AddServerModal({ onClose }: AddServerModalProps) {
         onClose();
       }
     } catch (err) {
+      if (temporaryServerId) {
+        try {
+          await deleteServer(temporaryServerId);
+        } catch (deleteErr) {
+          console.error('Failed to remove temporary server:', deleteErr);
+        }
+      }
+
       setTestResult({
         success: false,
         message: err instanceof Error ? err.message : 'Connection test failed',

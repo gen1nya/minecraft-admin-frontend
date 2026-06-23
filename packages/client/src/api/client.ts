@@ -3,13 +3,22 @@ import type { ServerStats, Player, MojangProfile, Server, ServerConnectionTest }
 const API_BASE = '/api';
 
 async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const headers = new Headers(options?.headers);
+  if (options?.body && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+
   const response = await fetch(`${API_BASE}${endpoint}`, {
-    headers: { 'Content-Type': 'application/json' },
     ...options,
+    headers,
   });
 
   if (!response.ok) {
-    throw new Error(`API Error: ${response.status}`);
+    throw new Error(await getErrorMessage(response));
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
   }
 
   return response.json();
@@ -17,11 +26,36 @@ async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T>
 
 export type GameMode = 'survival' | 'creative' | 'adventure' | 'spectator';
 
+async function getErrorMessage(response: Response): Promise<string> {
+  const fallback = `API Error: ${response.status}`;
+
+  try {
+    const text = await response.text();
+    if (!text) return fallback;
+
+    try {
+      const data = JSON.parse(text) as { error?: unknown; message?: unknown };
+      if (typeof data.error === 'string') return data.error;
+      if (typeof data.message === 'string') return data.message;
+    } catch {
+      return text;
+    }
+
+    return text;
+  } catch {
+    return fallback;
+  }
+}
+
+function pathSegment(value: string): string {
+  return encodeURIComponent(value);
+}
+
 // Server management API
 export const serversApi = {
   getServers: () => fetchJson<Server[]>('/servers'),
 
-  getServer: (serverId: string) => fetchJson<Server>(`/servers/${serverId}`),
+  getServer: (serverId: string) => fetchJson<Server>(`/servers/${pathSegment(serverId)}`),
 
   addServer: (server: Omit<Server, 'id'>) =>
     fetchJson<Server>('/servers', {
@@ -30,80 +64,84 @@ export const serversApi = {
     }),
 
   updateServer: (serverId: string, server: Partial<Omit<Server, 'id'>>) =>
-    fetchJson<Server>(`/servers/${serverId}`, {
+    fetchJson<Server>(`/servers/${pathSegment(serverId)}`, {
       method: 'PUT',
       body: JSON.stringify(server),
     }),
 
   deleteServer: (serverId: string) =>
-    fetch(`${API_BASE}/servers/${serverId}`, { method: 'DELETE' }),
+    fetchJson<void>(`/servers/${pathSegment(serverId)}`, { method: 'DELETE' }),
 
   testConnection: (serverId: string) =>
-    fetchJson<ServerConnectionTest>(`/servers/${serverId}/test`, {
+    fetchJson<ServerConnectionTest>(`/servers/${pathSegment(serverId)}/test`, {
       method: 'POST',
     }),
 };
 
 // Server-specific API (requires serverId)
-export const createServerApi = (serverId: string) => ({
-  getServerStats: () => fetchJson<ServerStats>(`/servers/${serverId}/stats`),
+export const createServerApi = (serverId: string) => {
+  const id = pathSegment(serverId);
 
-  getPlayers: () => fetchJson<Player[]>(`/servers/${serverId}/players`),
+  return {
+    getServerStats: () => fetchJson<ServerStats>(`/servers/${id}/stats`),
 
-  sendCommand: (command: string) =>
-    fetchJson<{ response: string }>(`/servers/${serverId}/rcon`, {
-      method: 'POST',
-      body: JSON.stringify({ command }),
-    }),
+    getPlayers: () => fetchJson<Player[]>(`/servers/${id}/players`),
 
-  setGameMode: (player: string, mode: GameMode) =>
-    fetchJson<{ response: string }>(`/servers/${serverId}/rcon`, {
-      method: 'POST',
-      body: JSON.stringify({ command: `gamemode ${mode} ${player}` }),
-    }),
+    sendCommand: (command: string) =>
+      fetchJson<{ response: string }>(`/servers/${id}/rcon`, {
+        method: 'POST',
+        body: JSON.stringify({ command }),
+      }),
 
-  whitelistAdd: (player: string) =>
-    fetchJson<{ response: string }>(`/servers/${serverId}/rcon`, {
-      method: 'POST',
-      body: JSON.stringify({ command: `whitelist add ${player}` }),
-    }),
+    setGameMode: (player: string, mode: GameMode) =>
+      fetchJson<{ response: string }>(`/servers/${id}/rcon`, {
+        method: 'POST',
+        body: JSON.stringify({ command: `gamemode ${mode} ${player}` }),
+      }),
 
-  whitelistRemove: (player: string) =>
-    fetchJson<{ response: string }>(`/servers/${serverId}/rcon`, {
-      method: 'POST',
-      body: JSON.stringify({ command: `whitelist remove ${player}` }),
-    }),
+    whitelistAdd: (player: string) =>
+      fetchJson<{ response: string }>(`/servers/${id}/rcon`, {
+        method: 'POST',
+        body: JSON.stringify({ command: `whitelist add ${player}` }),
+      }),
 
-  op: (player: string) =>
-    fetchJson<{ response: string }>(`/servers/${serverId}/rcon`, {
-      method: 'POST',
-      body: JSON.stringify({ command: `op ${player}` }),
-    }),
+    whitelistRemove: (player: string) =>
+      fetchJson<{ response: string }>(`/servers/${id}/rcon`, {
+        method: 'POST',
+        body: JSON.stringify({ command: `whitelist remove ${player}` }),
+      }),
 
-  deop: (player: string) =>
-    fetchJson<{ response: string }>(`/servers/${serverId}/rcon`, {
-      method: 'POST',
-      body: JSON.stringify({ command: `deop ${player}` }),
-    }),
+    op: (player: string) =>
+      fetchJson<{ response: string }>(`/servers/${id}/rcon`, {
+        method: 'POST',
+        body: JSON.stringify({ command: `op ${player}` }),
+      }),
 
-  kick: (player: string, reason?: string) =>
-    fetchJson<{ response: string }>(`/servers/${serverId}/rcon`, {
-      method: 'POST',
-      body: JSON.stringify({ command: reason ? `kick ${player} ${reason}` : `kick ${player}` }),
-    }),
+    deop: (player: string) =>
+      fetchJson<{ response: string }>(`/servers/${id}/rcon`, {
+        method: 'POST',
+        body: JSON.stringify({ command: `deop ${player}` }),
+      }),
 
-  ban: (player: string, reason?: string) =>
-    fetchJson<{ response: string }>(`/servers/${serverId}/rcon`, {
-      method: 'POST',
-      body: JSON.stringify({ command: reason ? `ban ${player} ${reason}` : `ban ${player}` }),
-    }),
+    kick: (player: string, reason?: string) =>
+      fetchJson<{ response: string }>(`/servers/${id}/rcon`, {
+        method: 'POST',
+        body: JSON.stringify({ command: reason ? `kick ${player} ${reason}` : `kick ${player}` }),
+      }),
 
-  pardon: (player: string) =>
-    fetchJson<{ response: string }>(`/servers/${serverId}/rcon`, {
-      method: 'POST',
-      body: JSON.stringify({ command: `pardon ${player}` }),
-    }),
-});
+    ban: (player: string, reason?: string) =>
+      fetchJson<{ response: string }>(`/servers/${id}/rcon`, {
+        method: 'POST',
+        body: JSON.stringify({ command: reason ? `ban ${player} ${reason}` : `ban ${player}` }),
+      }),
+
+    pardon: (player: string) =>
+      fetchJson<{ response: string }>(`/servers/${id}/rcon`, {
+        method: 'POST',
+        body: JSON.stringify({ command: `pardon ${player}` }),
+      }),
+  };
+};
 
 // Legacy API (uses first server) - for backward compatibility
 export const api = {

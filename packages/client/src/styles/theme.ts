@@ -8,16 +8,16 @@
 export const colors = {
   // Основные цвета (Minecraft-inspired)
   primary: {
-    main: '#5B8731',      // Minecraft grass green
-    light: '#7CB342',
-    dark: '#3D5C1F',
+    main: '#65A33A',      // Minecraft grass green
+    light: '#8BCF56',
+    dark: '#446E28',
     contrast: '#FFFFFF',
   },
 
   secondary: {
-    main: '#8B6914',      // Gold/amber
-    light: '#B8860B',
-    dark: '#6B4F0A',
+    main: '#C28A2E',      // Gold/amber
+    light: '#E0AD4D',
+    dark: '#80581C',
     contrast: '#FFFFFF',
   },
 
@@ -32,10 +32,10 @@ export const colors = {
 
   // Фон (dark theme)
   background: {
-    primary: '#1A1A1A',     // Основной фон
-    secondary: '#242424',   // Карточки, панели
-    tertiary: '#2E2E2E',    // Hover states
-    elevated: '#333333',    // Модалки, dropdown
+    primary: '#0D1110',     // Основной фон
+    secondary: '#151A18',   // Карточки, панели
+    tertiary: '#1D2521',    // Hover states
+    elevated: '#263029',    // Модалки, dropdown
   },
 
   // Текст
@@ -48,9 +48,9 @@ export const colors = {
 
   // Границы
   border: {
-    default: '#3A3A3A',
-    light: '#4A4A4A',
-    focus: '#5B8731',
+    default: '#2B3530',
+    light: '#3B4740',
+    focus: '#65A33A',
   },
 } as const;
 
@@ -98,10 +98,10 @@ export const typography = {
 } as const;
 
 export const shadows = {
-  sm: '0 1px 2px rgba(0, 0, 0, 0.3)',
-  md: '0 4px 6px rgba(0, 0, 0, 0.4)',
-  lg: '0 10px 15px rgba(0, 0, 0, 0.5)',
-  xl: '0 20px 25px rgba(0, 0, 0, 0.6)',
+  sm: '0 1px 2px rgba(0, 0, 0, 0.28)',
+  md: '0 12px 28px rgba(0, 0, 0, 0.26)',
+  lg: '0 18px 44px rgba(0, 0, 0, 0.32)',
+  xl: '0 26px 70px rgba(0, 0, 0, 0.42)',
 } as const;
 
 export const breakpoints = {

@@ -26,10 +26,14 @@ export const flexColumn = css`
 
 // Card/Panel styles
 export const card = css`
-  background: ${theme.colors.background.secondary};
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 120px),
+    ${theme.colors.background.secondary};
   border-radius: ${theme.borderRadius.lg};
   border: 1px solid ${theme.colors.border.default};
   padding: ${theme.spacing.lg};
+  box-shadow: ${theme.shadows.sm};
+  min-width: 0;
 `;
 
 export const cardHoverable = css`
@@ -55,6 +59,7 @@ export const buttonBase = css`
   font-size: ${theme.typography.fontSize.sm};
   transition: all ${theme.transitions.fast};
   white-space: nowrap;
+  min-height: 36px;
 
   &:disabled {
     opacity: 0.5;
@@ -64,8 +69,9 @@ export const buttonBase = css`
 
 export const buttonPrimary = css`
   ${buttonBase}
-  background: ${theme.colors.primary.main};
+  background: linear-gradient(180deg, ${theme.colors.primary.light}, ${theme.colors.primary.main});
   color: ${theme.colors.primary.contrast};
+  box-shadow: 0 8px 18px rgba(101, 163, 58, 0.22);
 
   &:hover:not(:disabled) {
     background: ${theme.colors.primary.light};
@@ -109,6 +115,7 @@ export const inputBase = css`
   color: ${theme.colors.text.primary};
   font-size: ${theme.typography.fontSize.sm};
   transition: all ${theme.transitions.fast};
+  min-height: 36px;
 
   &::placeholder {
     color: ${theme.colors.text.disabled};

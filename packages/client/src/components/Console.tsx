@@ -14,11 +14,12 @@ const OutputArea = styled.div`
   border: 1px solid ${theme.colors.border.default};
   border-radius: ${theme.borderRadius.md};
   padding: ${theme.spacing.md};
-  min-height: 200px;
-  max-height: 300px;
+  min-height: 260px;
+  max-height: 360px;
   overflow-y: auto;
   font-family: ${theme.typography.fontFamily.mono};
   font-size: ${theme.typography.fontSize.sm};
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 `;
 
 const OutputLine = styled.div<{ $type: 'command' | 'response' | 'error' }>`
@@ -46,6 +47,10 @@ const CommandPrefix = styled.span`
 const InputRow = styled.form`
   display: flex;
   gap: ${theme.spacing.sm};
+
+  @media (max-width: ${theme.breakpoints.mobile}) {
+    flex-direction: column;
+  }
 `;
 
 const CommandInput = styled(Input)`
@@ -57,6 +62,8 @@ const EmptyState = styled.div`
   color: ${theme.colors.text.disabled};
   text-align: center;
   padding: ${theme.spacing.lg};
+  border: 1px dashed ${theme.colors.border.default};
+  border-radius: ${theme.borderRadius.md};
 `;
 
 // Minecraft color codes

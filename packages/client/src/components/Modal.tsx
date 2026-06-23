@@ -1,20 +1,31 @@
 import { useEffect, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import styled from 'styled-components';
 import { theme } from '@/styles';
 
 const Overlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   z-index: ${theme.zIndex.modal};
   padding: ${theme.spacing.lg};
+  overflow-y: auto;
+
+  &::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: rgba(4, 6, 5, 0.72);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
 `;
 
 const ModalContainer = styled.div`
-  background: ${theme.colors.background.secondary};
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 160px),
+    ${theme.colors.background.secondary};
   border-radius: ${theme.borderRadius.lg};
   border: 1px solid ${theme.colors.border.default};
   max-width: 480px;
@@ -22,6 +33,12 @@ const ModalContainer = styled.div`
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: ${theme.shadows.xl};
+  position: relative;
+  z-index: 1;
+
+  @media (max-width: ${theme.breakpoints.mobile}) {
+    max-height: calc(100vh - ${theme.spacing.lg});
+  }
 `;
 
 const ModalHeader = styled.div`
@@ -57,6 +74,11 @@ const CloseButton = styled.button`
     background: ${theme.colors.background.tertiary};
     color: ${theme.colors.text.primary};
   }
+
+  &:focus-visible {
+    outline: 2px solid ${theme.colors.border.focus};
+    outline-offset: 2px;
+  }
 `;
 
 const ModalBody = styled.div`
@@ -89,7 +111,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <Overlay onClick={onClose}>
       <ModalContainer onClick={e => e.stopPropagation()}>
         <ModalHeader>
@@ -98,6 +120,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         </ModalHeader>
         <ModalBody>{children}</ModalBody>
       </ModalContainer>
-    </Overlay>
+    </Overlay>,
+    document.body
   );
 }

@@ -8,7 +8,7 @@ import { AddPlayerModal } from './AddPlayerModal';
 
 const PlayerGridWrapper = styled.div<{ $showTopFade: boolean }>`
   position: relative;
-  max-height: 400px;
+  max-height: 460px;
 
   &::before {
     content: '';
@@ -41,7 +41,7 @@ const PlayerGrid = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${theme.spacing.sm};
-  max-height: 400px;
+  max-height: 460px;
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: ${theme.spacing.xs};
@@ -66,19 +66,29 @@ const PlayerGrid = styled.div`
   }
 `;
 
-const PlayerRow = styled.div`
+const PlayerRow = styled.button`
   display: flex;
   align-items: center;
   gap: ${theme.spacing.md};
+  width: 100%;
   padding: ${theme.spacing.sm} ${theme.spacing.md};
   background: ${theme.colors.background.tertiary};
+  border: 1px solid ${theme.colors.border.default};
   border-radius: ${theme.borderRadius.md};
+  color: inherit;
   cursor: pointer;
+  text-align: left;
   transition: all ${theme.transitions.fast};
 
   &:hover {
     background: ${theme.colors.background.elevated};
-    transform: translateX(4px);
+    border-color: ${theme.colors.border.light};
+    transform: translateX(3px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${theme.colors.border.focus};
+    outline-offset: 2px;
   }
 `;
 
@@ -121,6 +131,8 @@ const PlayerName = styled.div`
   display: flex;
   align-items: center;
   gap: ${theme.spacing.sm};
+  min-width: 0;
+  flex-wrap: wrap;
 `;
 
 const OpBadge = styled.span`
@@ -169,11 +181,19 @@ const Toolbar = styled.div`
   flex-direction: column;
   gap: ${theme.spacing.sm};
   margin-bottom: ${theme.spacing.md};
+  padding: ${theme.spacing.sm};
+  border: 1px solid ${theme.colors.border.default};
+  border-radius: ${theme.borderRadius.lg};
+  background: ${theme.colors.background.primary};
 `;
 
 const SearchRow = styled.div`
   display: flex;
   gap: ${theme.spacing.sm};
+
+  @media (max-width: ${theme.breakpoints.mobile}) {
+    flex-direction: column;
+  }
 `;
 
 const SearchInput = styled(Input)`
@@ -183,6 +203,7 @@ const SearchInput = styled(Input)`
 const FilterRow = styled.div`
   display: flex;
   gap: ${theme.spacing.xs};
+  flex-wrap: wrap;
 `;
 
 type FilterType = 'all' | 'online' | 'banned';
@@ -201,6 +222,11 @@ const FilterButton = styled.button<{ $active: boolean }>`
   &:hover {
     border-color: ${theme.colors.primary.main};
     color: ${props => props.$active ? theme.colors.primary.contrast : theme.colors.primary.main};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${theme.colors.border.focus};
+    outline-offset: 2px;
   }
 `;
 

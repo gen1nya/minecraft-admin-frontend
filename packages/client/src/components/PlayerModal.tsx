@@ -10,6 +10,11 @@ const PlayerHeader = styled.div`
   align-items: center;
   gap: ${theme.spacing.md};
   margin-bottom: ${theme.spacing.lg};
+
+  @media (max-width: ${theme.breakpoints.mobile}) {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
 `;
 
 const AvatarLarge = styled.img`
@@ -58,6 +63,10 @@ const GameModeGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: ${theme.spacing.sm};
+
+  @media (max-width: ${theme.breakpoints.mobile}) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const GameModeButton = styled.button<{ $active?: boolean }>`
@@ -119,6 +128,10 @@ const ButtonGroup = styled.div`
 const ButtonRow = styled.div`
   display: flex;
   gap: ${theme.spacing.sm};
+
+  @media (max-width: ${theme.breakpoints.mobile}) {
+    flex-direction: column;
+  }
 `;
 
 const BanForm = styled.div`
