@@ -178,8 +178,12 @@ export function AddPlayerModal({ open, onClose, onSuccess, existingPlayerIds }: 
         <>
           <PlayerPreview>
             <AvatarLarge
-              src={`https://mc-heads.net/avatar/${profile.id}/64`}
+              src={`/api/heads/${profile.id}?size=64`}
               alt={profile.name}
+              onError={(e) => {
+                const fallback = `https://mc-heads.net/avatar/${profile.id}/64`;
+                if (e.currentTarget.src !== fallback) e.currentTarget.src = fallback;
+              }}
             />
             <PlayerInfo>
               <PlayerName>{profile.name}</PlayerName>

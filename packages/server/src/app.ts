@@ -5,6 +5,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { serverManager } from './ServerManager';
 import { eventManager, StoredEvent } from './EventManager';
 import { parseGameEvent, GameEvent } from './gameEvent';
+import { headService, isValidUuid } from './HeadService';
 
 export interface AppContext {
   app: express.Express;
@@ -312,6 +313,34 @@ export function createApp(): AppContext {
     } catch (error) {
       console.error('Mojang lookup failed:', error);
       res.status(500).json({ error: 'Failed to lookup player' });
+    }
+  });
+
+  // ==================== Player Heads ====================
+
+  // Avatar/head proxy: authoritative render from Mojang with external fallback
+  // and caching (see HeadService). Replaces direct mc-heads.net <img> usage,
+  // which intermittently served default Steve/Alex for skinned players.
+  app.get('/api/heads/:uuid', async (req, res) => {
+    const { uuid } = req.params;
+    if (!isValidUuid(uuid)) {
+      return res.status(400).json({ error: 'Invalid uuid' });
+    }
+
+    const requested = parseInt(req.query.size as string);
+    const size = Math.min(Math.max(Number.isFinite(requested) ? requested : 32, 8), 512);
+
+    try {
+      const head = await headService.getHead(uuid, size);
+      if (!head) {
+        return res.status(404).end();
+      }
+      res.setHeader('Content-Type', head.contentType);
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      res.send(head.buffer);
+    } catch (error) {
+      console.error('Head render failed:', error);
+      res.status(502).end();
     }
   });
 

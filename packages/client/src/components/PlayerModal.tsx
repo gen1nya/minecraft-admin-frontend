@@ -206,8 +206,12 @@ export function PlayerModal({ player, onClose, onUpdate }: PlayerModalProps) {
     <Modal open={!!player} onClose={onClose} title="Player Details">
       <PlayerHeader>
         <AvatarLarge
-          src={`https://mc-heads.net/avatar/${player.uuid}/64`}
+          src={`/api/heads/${player.uuid}?size=64`}
           alt={player.name}
+          onError={(e) => {
+            const fallback = `https://mc-heads.net/avatar/${player.uuid}/64`;
+            if (e.currentTarget.src !== fallback) e.currentTarget.src = fallback;
+          }}
         />
         <PlayerInfo>
           <PlayerName>{player.name}</PlayerName>

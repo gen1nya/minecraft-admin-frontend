@@ -231,7 +231,7 @@ const FilterButton = styled.button<{ $active: boolean }>`
 `;
 
 function getAvatarUrl(uuid: string): string {
-  return `https://mc-heads.net/avatar/${uuid}/32`;
+  return `/api/heads/${uuid}?size=32`;
 }
 
 function formatGameMode(mode: Player['gameMode']): string | null {
@@ -240,6 +240,8 @@ function formatGameMode(mode: Player['gameMode']): string | null {
 }
 
 function Avatar({ uuid, name }: { uuid: string; name: string }) {
+  // Rows are keyed by uuid, so this remounts (and resets) per player.
+  const [src, setSrc] = useState(getAvatarUrl(uuid));
   const [failed, setFailed] = useState(false);
 
   if (failed) {
@@ -253,10 +255,15 @@ function Avatar({ uuid, name }: { uuid: string; name: string }) {
   return (
     <AvatarWrapper>
       <PlayerAvatar
-        src={getAvatarUrl(uuid)}
+        src={src}
         alt={name}
         loading="lazy"
-        onError={() => setFailed(true)}
+        onError={() => {
+          // Proxy unavailable -> try mc-heads directly, then the letter fallback.
+          const fallback = `https://mc-heads.net/avatar/${uuid}/32`;
+          if (src !== fallback) setSrc(fallback);
+          else setFailed(true);
+        }}
       />
     </AvatarWrapper>
   );
