@@ -32,3 +32,6 @@ Thumbs.db
 # Server config (contains credentials)
 packages/server/servers.json
 servers.json
+
+# Local deployment overrides (instance-specific)
+docker-compose.override.yml
