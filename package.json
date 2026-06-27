@@ -10,7 +10,8 @@
     "dev:server": "npm run dev --workspace=@mcp/server",
     "dev:client": "npm run dev --workspace=@mcp/client",
     "build": "npm run build --workspaces",
-    "lint": "npm run lint --workspaces --if-present"
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",

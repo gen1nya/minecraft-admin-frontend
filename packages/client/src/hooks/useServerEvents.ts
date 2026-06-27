@@ -1,18 +1,34 @@
 import { useEffect, useMemo, useState } from 'react';
 
-export interface ChatMessage {
+export type ServerEventType =
+  | 'chat'
+  | 'join'
+  | 'leave'
+  | 'dimension_change'
+  | 'death'
+  | 'kick'
+  | 'ban'
+  | 'login_attempt';
+
+export interface ServerEvent {
   id: string;
   serverId: string;
+  type: ServerEventType;
   player: string;
   playerUuid: string;
-  message: string;
-  timestamp: string;
+  timestamp: number; // epoch millis
+  message?: string;
+  from?: string;
+  to?: string;
+  cause?: string;
+  reason?: string;
+  allowed?: boolean;
 }
 
-const MAX_MESSAGES = 500;
+const MAX_EVENTS = 500;
 const RECONNECT_DELAY_MS = 3000;
 
-let messages: ChatMessage[] = [];
+let events: ServerEvent[] = [];
 let ws: WebSocket | null = null;
 let connected = false;
 let reconnectTimer: number | null = null;
@@ -27,38 +43,38 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-function isChatMessage(value: unknown): value is ChatMessage {
+function isServerEvent(value: unknown): value is ServerEvent {
   return (
     isRecord(value) &&
     typeof value.id === 'string' &&
     typeof value.serverId === 'string' &&
+    typeof value.type === 'string' &&
     typeof value.player === 'string' &&
     typeof value.playerUuid === 'string' &&
-    typeof value.message === 'string' &&
-    typeof value.timestamp === 'string'
+    typeof value.timestamp === 'number'
   );
 }
 
-function trimMessages(nextMessages: ChatMessage[]): ChatMessage[] {
-  return nextMessages
-    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-    .slice(-MAX_MESSAGES);
+function trimEvents(nextEvents: ServerEvent[]): ServerEvent[] {
+  return nextEvents
+    .sort((a, b) => a.timestamp - b.timestamp)
+    .slice(-MAX_EVENTS);
 }
 
-function addMessage(message: ChatMessage) {
-  if (messages.some((existing) => existing.id === message.id)) return;
+function addEvent(event: ServerEvent) {
+  if (events.some((existing) => existing.id === event.id)) return;
 
-  messages = trimMessages([...messages, message]);
+  events = trimEvents([...events, event]);
   notifyListeners();
 }
 
-function mergeHistory(history: ChatMessage[]) {
-  const existingIds = new Set(messages.map((message) => message.id));
-  const newMessages = history.filter((message) => !existingIds.has(message.id));
+function mergeHistory(history: ServerEvent[]) {
+  const existingIds = new Set(events.map((event) => event.id));
+  const newEvents = history.filter((event) => !existingIds.has(event.id));
 
-  if (newMessages.length === 0) return;
+  if (newEvents.length === 0) return;
 
-  messages = trimMessages([...messages, ...newMessages]);
+  events = trimEvents([...events, ...newEvents]);
   notifyListeners();
 }
 
@@ -88,13 +104,13 @@ function handleMessage(event: MessageEvent) {
     const payload = JSON.parse(event.data) as unknown;
     if (!isRecord(payload) || typeof payload.type !== 'string') return;
 
-    if (payload.type === 'history' && Array.isArray(payload.messages)) {
-      mergeHistory(payload.messages.filter(isChatMessage));
+    if (payload.type === 'history' && Array.isArray(payload.events)) {
+      mergeHistory(payload.events.filter(isServerEvent));
       return;
     }
 
-    if (payload.type === 'chat' && isChatMessage(payload.message)) {
-      addMessage(payload.message);
+    if (payload.type === 'event' && isServerEvent(payload.event)) {
+      addEvent(payload.event);
     }
   } catch {
     // Ignore malformed WebSocket payloads.
@@ -149,7 +165,7 @@ function disconnectIfIdle() {
   connected = false;
 }
 
-export function useChat(serverId: string | null) {
+export function useServerEvents(serverId: string | null) {
   const [version, setVersion] = useState(0);
 
   useEffect(() => {
@@ -164,10 +180,10 @@ export function useChat(serverId: string | null) {
     };
   }, []);
 
-  const serverMessages = useMemo(() => {
+  const serverEvents = useMemo(() => {
     if (!serverId) return [];
-    return messages.filter((message) => message.serverId === serverId);
+    return events.filter((event) => event.serverId === serverId);
   }, [serverId, version]);
 
-  return { messages: serverMessages, connected };
+  return { events: serverEvents, connected };
 }

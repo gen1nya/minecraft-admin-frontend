@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import { theme, Card, CardHeader, CardTitle, Button, Input } from '@/styles';
 import { useServer } from '@/context';
-import { useChat } from '@/hooks/useChat';
+import { useServerEvents, type ServerEvent } from '@/hooks/useServerEvents';
 
 const ChatBody = styled.div`
   display: flex;
@@ -57,6 +57,24 @@ const MessageText = styled.span`
   @media (max-width: ${theme.breakpoints.mobile}) {
     grid-column: 1 / -1;
   }
+`;
+
+const EventRow = styled.div`
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: ${theme.spacing.sm};
+  margin-bottom: ${theme.spacing.xs};
+  align-items: baseline;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const EventText = styled.span`
+  color: ${theme.colors.text.disabled};
+  word-break: break-word;
+  font-style: italic;
 `;
 
 const AdminMessage = styled.div`
@@ -119,20 +137,46 @@ const MessageInput = styled(Input)`
   font-family: ${theme.typography.fontFamily.mono};
 `;
 
-function formatTime(timestamp: string): string {
+function formatTime(timestamp: number): string {
   const date = new Date(timestamp);
   return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+}
+
+// Human-readable one-line description for non-chat events.
+function describeEvent(event: ServerEvent): string {
+  switch (event.type) {
+    case 'join':
+      return `🟢 ${event.player} зашёл на сервер`;
+    case 'leave':
+      return `🔴 ${event.player} вышел`;
+    case 'dimension_change':
+      return `🌀 ${event.player}: ${event.from ?? '?'} → ${event.to ?? '?'}`;
+    case 'death':
+      return `💀 ${event.cause || `${event.player} погиб`}`;
+    case 'kick':
+      return `⛔ ${event.player}${event.reason ? ` — ${event.reason}` : ' был кикнут'}`;
+    case 'ban':
+      return `🔨 ${event.player} забанен${event.reason ? ` — ${event.reason}` : ''}`;
+    case 'login_attempt':
+      return `${event.allowed ? '🔓' : '🚫'} ${event.player} — попытка входа ${event.allowed ? 'разрешена' : 'отклонена'}${event.reason ? ` (${event.reason})` : ''}`;
+    default:
+      return `ℹ️ ${event.player}: ${event.type}`;
+  }
 }
 
 interface LocalMessage {
   id: string;
   text: string;
-  timestamp: string;
+  timestamp: number;
 }
+
+type FeedItem =
+  | { kind: 'event'; id: string; timestamp: number; event: ServerEvent }
+  | { kind: 'admin'; id: string; timestamp: number; text: string };
 
 export function Chat() {
   const { currentServerId, api } = useServer();
-  const { messages, connected } = useChat(currentServerId);
+  const { events, connected } = useServerEvents(currentServerId);
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [localMessages, setLocalMessages] = useState<LocalMessage[]>([]);
@@ -144,17 +188,17 @@ export function Chat() {
     setLocalMessages([]);
   }, [currentServerId]);
 
-  // Combine and sort messages
-  const allMessages = [
-    ...messages.map(m => ({ ...m, type: 'player' as const })),
-    ...localMessages.map(m => ({ ...m, type: 'admin' as const })),
-  ].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  // Combine and sort the feed (game events + local admin broadcasts)
+  const feed: FeedItem[] = [
+    ...events.map((event): FeedItem => ({ kind: 'event', id: event.id, timestamp: event.timestamp, event })),
+    ...localMessages.map((m): FeedItem => ({ kind: 'admin', id: m.id, timestamp: m.timestamp, text: m.text })),
+  ].sort((a, b) => a.timestamp - b.timestamp);
 
   useEffect(() => {
     if (messagesRef.current) {
       messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
     }
-  }, [allMessages.length]);
+  }, [feed.length]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,7 +208,7 @@ export function Chat() {
     const localMsg: LocalMessage = {
       id: `local_${Date.now()}`,
       text: msg,
-      timestamp: new Date().toISOString(),
+      timestamp: Date.now(),
     };
 
     setSending(true);
@@ -192,24 +236,37 @@ export function Chat() {
       </CardHeader>
       <ChatBody>
         <MessagesArea ref={messagesRef}>
-          {allMessages.length === 0 ? (
+          {feed.length === 0 ? (
             <EmptyState>No messages yet</EmptyState>
           ) : (
-            allMessages.map((msg) => (
-              msg.type === 'player' ? (
-                <MessageRow key={msg.id}>
-                  <Timestamp>[{formatTime(msg.timestamp)}]</Timestamp>
-                  <PlayerName>&lt;{msg.player}&gt;</PlayerName>
-                  <MessageText>{msg.message}</MessageText>
-                </MessageRow>
-              ) : (
-                <AdminMessage key={msg.id}>
-                  <Timestamp>[{formatTime(msg.timestamp)}]</Timestamp>
-                  <AdminTag>[Server]</AdminTag>
-                  <MessageText>{msg.text}</MessageText>
-                </AdminMessage>
-              )
-            ))
+            feed.map((item) => {
+              if (item.kind === 'admin') {
+                return (
+                  <AdminMessage key={item.id}>
+                    <Timestamp>[{formatTime(item.timestamp)}]</Timestamp>
+                    <AdminTag>[Server]</AdminTag>
+                    <MessageText>{item.text}</MessageText>
+                  </AdminMessage>
+                );
+              }
+
+              if (item.event.type === 'chat') {
+                return (
+                  <MessageRow key={item.id}>
+                    <Timestamp>[{formatTime(item.timestamp)}]</Timestamp>
+                    <PlayerName>&lt;{item.event.player}&gt;</PlayerName>
+                    <MessageText>{item.event.message}</MessageText>
+                  </MessageRow>
+                );
+              }
+
+              return (
+                <EventRow key={item.id}>
+                  <Timestamp>[{formatTime(item.timestamp)}]</Timestamp>
+                  <EventText>{describeEvent(item.event)}</EventText>
+                </EventRow>
+              );
+            })
           )}
         </MessagesArea>
         <InputRow onSubmit={handleSubmit}>
